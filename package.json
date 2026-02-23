@@ -1,0 +1,14 @@
+{
+  "name": "iwara-electron-client",
+  "version": "0.1.0",
+  "description": "Iwara.tv Windows 本地化 Electron 客户端，基于 webview + HTML 解析。",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^30.0.0"
+  }
+}

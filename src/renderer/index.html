@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src * data: blob:; media-src *; connect-src *;">
+  <title>iwara</title>
+  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&family=Saira+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app">
+    <div class="titlebar">
+      <div class="traf">
+        <div class="traf-dot cl" data-action="close"></div>
+        <div class="traf-dot mn" data-action="minimize"></div>
+        <div class="traf-dot mx" data-action="maximize"></div>
+      </div>
+      <div class="tb-mid">iwara</div>
+      <div class="tb-right">
+        <div class="tb-pill" id="themeBtn">blue</div>
+        <div class="tb-pill" id="versionPill">0.1.0</div>
+      </div>
+    </div>
+
+    <div class="body">
+      <nav class="sidebar" id="sb">
+        <div class="sb-tog" id="sbTog">‹</div>
+
+        <div class="sb-account" id="accountBtn">
+          <div class="sb-av">G</div>
+          <div class="sb-acc-info">
+            <div class="sb-acc-name">Guest</div>
+            <div class="sb-acc-sub">点击登录</div>
+          </div>
+          <span class="sb-acc-arr">›</span>
+        </div>
+
+        <div class="sb-nav">
+          <div class="sb-item active" data-page="home">
+            <div class="sb-ico">⊞</div><div class="sb-lbl">推荐</div>
+          </div>
+          <div class="sb-item" data-page="video">
+            <div class="sb-ico">▷</div><div class="sb-lbl">视频</div>
+          </div>
+          <div class="sb-item" data-page="image">
+            <div class="sb-ico">◫</div><div class="sb-lbl">图片</div>
+          </div>
+          <div class="sb-item" data-page="forum">
+            <div class="sb-ico">◎</div><div class="sb-lbl">论坛</div>
+          </div>
+          <div class="sb-item" data-page="search">
+            <div class="sb-ico">◌</div><div class="sb-lbl">搜索</div>
+          </div>
+          <div class="sb-item" data-page="create">
+            <div class="sb-ico">↑</div><div class="sb-lbl">创作</div>
+          </div>
+        </div>
+
+        <div class="sb-foot">
+          <div class="sb-item" id="ratingToggle" data-page-action="toggle-rating">
+            <div class="sb-ico">⊘</div><div class="sb-lbl">评级过滤</div>
+          </div>
+          <div class="sb-item" data-page="settings">
+            <div class="sb-ico">⊙</div><div class="sb-lbl">设置</div>
+          </div>
+        </div>
+      </nav>
+
+      <div class="main">
+        <div class="topbar">
+          <div class="ico-btn hidden" id="topBackBtn" title="返回">‹</div>
+          <div class="page-title" id="ptitle">推荐</div>
+          <div class="tb-actions">
+            <div class="ico-btn" id="topImmersiveBtn" title="沉浸模式">◫</div>
+            <div class="ico-btn" id="topRefreshBtn" title="刷新">↻</div>
+          </div>
+        </div>
+
+        <div id="subarea"></div>
+
+        <div class="content" id="content"></div>
+      </div>
+    </div>
+
+    <div class="statusbar">
+      <div class="st"><div class="st-dot" id="netDot"></div><span id="netHost">iwara.tv</span></div>
+      <div class="st-sep"></div>
+      <div class="st" id="stlbl">推荐</div>
+      <div class="st-sep"></div>
+      <div class="st" id="stmsg">ready</div>
+    </div>
+  </div>
+
+  <div class="rat-panel" id="ratPanel">
+    <div class="rat-title">评级过滤</div>
+    <div class="rat-row">
+      <div class="rat-lbl"><div class="rat-dot" style="background:#4ade80"></div>General</div>
+      <div class="toggle on" data-rating="general"></div>
+    </div>
+    <div class="rat-row">
+      <div class="rat-lbl"><div class="rat-dot" style="background:#f59e0b"></div>Ecchi</div>
+      <div class="toggle on" data-rating="ecchi"></div>
+    </div>
+    <div class="rat-row">
+      <div class="rat-lbl"><div class="rat-dot" style="background:#f87171"></div>Adult</div>
+      <div class="toggle" data-rating="adult"></div>
+    </div>
+    <div class="rat-note">全局生效，将影响列表请求。</div>
+  </div>
+
+  <script type="module" src="renderer.js"></script>
+</body>
+</html>

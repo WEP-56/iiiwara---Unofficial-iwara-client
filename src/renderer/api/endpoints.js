@@ -1,0 +1,33 @@
+export const endpoints={
+  me:()=>'/user',
+  userCounts:()=>'/user/counts',
+  userById:(id)=>`/user/${encodeURIComponent(String(id||''))}`,
+  lightProfileById:(id)=>`/light/profile/${encodeURIComponent(String(id||''))}`,
+  profileByName:(username)=>`/profile/${encodeURIComponent(String(username||''))}`,
+  autocompleteUsers:()=>'/autocomplete/users',
+  userFollowers:(userId)=>`/user/${encodeURIComponent(String(userId||''))}/followers`,
+  userFollowing:(userId)=>`/user/${encodeURIComponent(String(userId||''))}/following`,
+  userFriends:(userId)=>`/user/${encodeURIComponent(String(userId||''))}/friends`,
+  userNotifications:(userId)=>`/user/${encodeURIComponent(String(userId||''))}/notifications`,
+  userConversations:(userId)=>`/user/${encodeURIComponent(String(userId||''))}/conversations`,
+  conversationMessages:(conversationId)=>`/conversation/${encodeURIComponent(String(conversationId||''))}/messages`,
+
+  videos:()=>'/videos',
+  images:()=>'/images',
+  posts:()=>'/posts',
+  tags:()=>'/tags',
+  search:()=>'/search',
+  videoById:(id)=>`/video/${encodeURIComponent(String(id||''))}`,
+  imageById:(id)=>`/image/${encodeURIComponent(String(id||''))}`,
+  likeVideo:(id)=>`/video/${encodeURIComponent(String(id||''))}/like`,
+  likeImage:(id)=>`/image/${encodeURIComponent(String(id||''))}/like`,
+  userFollowOrUnfollow:(userId)=>`/user/${encodeURIComponent(String(userId||''))}/followers`,
+
+  forumRoot:()=>'/forum',
+  forumThreadsList:()=>'/forum/threads',
+  forumCategoryThreads:(categoryId)=>`/forum/${encodeURIComponent(String(categoryId||''))}`,
+  forumThread:(categoryId,threadId)=>`/forum/${encodeURIComponent(String(categoryId||''))}/${encodeURIComponent(String(threadId||''))}`,
+  forumThreadReply:(threadId)=>`/forum/${encodeURIComponent(String(threadId||''))}/reply`,
+
+  comments:(type,id)=>`/${encodeURIComponent(String(type||''))}/${encodeURIComponent(String(id||''))}/comments`,
+}

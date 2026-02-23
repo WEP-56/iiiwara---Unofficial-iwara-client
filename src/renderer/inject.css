@@ -1,0 +1,207 @@
+/* 
+  Iwara Client Injection CSS - V4 (Ultimate Clean)
+  目标：彻底移除侧边栏、广告，强制瀑布流卡片布局
+*/
+
+/* 1. 暴力隐藏一切干扰元素 */
+/* Iwara 旧版/新版常见的侧边栏容器 */
+.sidebar, 
+#sidebar, 
+.left-sidebar, 
+.right-sidebar,
+.v-navigation-drawer,
+aside,
+.col-md-3, /* 常见的侧边栏栅格 */
+.col-lg-3,
+.col-xl-2,
+div[class*="sidebar"],
+div[id*="sidebar"] {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  position: absolute !important; /* 移出文档流 */
+}
+
+/* 头部、底部、面包屑、标题栏 */
+header, .header, #header,
+footer, .footer, #footer,
+.v-app-bar,
+.v-footer,
+.breadcrumb, .v-breadcrumbs,
+.page-title,
+.alert, .v-alert,
+.banner {
+  display: none !important;
+}
+
+/* 广告容器通杀 */
+.ad, .ads, .advertisement,
+div[id*="ad-"], div[class*="ad-"],
+div[id*="banner"], div[class*="banner"],
+iframe, /* 绝大多数广告都是 iframe */
+div[id^="google"], div[class^="google"],
+a[href*="fanzagames"], /* 针对截图中的 Fanza 广告 */
+a[href*="dmm.co.jp"],
+.text-center.my-4 /* 上下多余的分页器外层 */
+{
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* 2. 重置主容器，让它铺满 */
+html, body, #app, .v-application--wrap, .v-main, .v-main__wrap {
+  background: transparent !important;
+  min-height: 100vh !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* 修正容器宽度 */
+.container, .container-fluid {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding: 10px !important;
+  margin: 0 !important;
+}
+
+/* 强制让主内容列占满 100% */
+.col-md-9, .col-lg-9, .col-xl-10, .col-12 {
+  flex: 0 0 100% !important;
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+/* 3. 卡片瀑布流布局 (Grid System) */
+/* 找到包裹卡片的容器 (通常是 .row) */
+.row {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+  gap: 16px !important;
+  margin: 0 !important;
+  width: 100% !important;
+}
+
+/* 详情页不应用 Grid，需要恢复 Flex */
+.node-type-video .row, 
+.page-video .row,
+.video-page .row {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* 修正 Grid 子项 */
+.col, [class*="col-"] {
+  display: block !important;
+  width: auto !important;
+  max-width: none !important;
+  flex: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* 4. 卡片样式美化 */
+.node-video, .node-image, .v-card, .card {
+  background: rgba(30, 35, 45, 0.6) !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+  height: 100% !important; /* 撑满 Grid 单元格 */
+  display: flex !important;
+  flex-direction: column !important;
+  margin-bottom: 0 !important; /* Grid gap 处理间距 */
+}
+
+.node-video:hover, .node-image:hover, .v-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5) !important;
+  border-color: rgba(79, 168, 232, 0.5) !important;
+}
+
+/* 缩略图容器 */
+.field-name-field-image, .v-image {
+  border-radius: 12px 12px 0 0 !important;
+  overflow: hidden !important;
+  aspect-ratio: 16/9 !important;
+}
+
+img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+/* 标题和信息 */
+.title, .card-title, h3 {
+  font-size: 14px !important;
+  line-height: 1.4 !important;
+  padding: 10px 12px 0 !important;
+  margin: 0 !important;
+  color: #eee !important;
+  font-weight: 500 !important;
+  background: transparent !important;
+}
+
+.submitted, .card-subtitle {
+  font-size: 11px !important;
+  color: #aaa !important;
+  padding: 4px 12px 12px !important;
+}
+
+/* 5. 分页器 */
+.pager, .pagination, .v-pagination {
+  grid-column: 1 / -1 !important; /* 独占一行 */
+  display: flex !important;
+  justify-content: center !important;
+  padding: 20px 0 !important;
+  list-style: none !important;
+}
+
+.pager li, .pagination li {
+  margin: 0 4px !important;
+}
+
+.pager a, .pagination a, .v-pagination__item {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #fff !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  text-decoration: none !important;
+  border: none !important;
+}
+
+.pager .active a, .pagination .active a, .v-pagination__item--active {
+  background: #4fa8e8 !important;
+}
+
+/* 6. 详情页特殊修复 */
+/* 视频播放器 */
+.video-js, video, .field-name-field-video {
+  width: 100% !important;
+  border-radius: 12px !important;
+  margin-bottom: 16px !important;
+}
+
+/* 评论 */
+#comments {
+  margin-top: 20px !important;
+}
+.comment {
+  background: rgba(255, 255, 255, 0.05) !important;
+  padding: 12px !important;
+  border-radius: 8px !important;
+  margin-bottom: 10px !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+/* 7. 隐藏滚动条 */
+::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+}
