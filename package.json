@@ -4,11 +4,67 @@
   "description": "Iwara.tv Windows 本地化 Electron 客户端，基于 webview + HTML 解析。",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:win": "electron-builder --win --x64"
   },
   "author": "",
   "license": "MIT",
+  "dependencies": {
+    "electron-updater": "^6.3.0"
+  },
   "devDependencies": {
-    "electron": "^30.0.0"
+    "electron": "^30.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.wep56.iiiwara",
+    "productName": "iiiwara",
+    "asar": true,
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!LoveIwara-master{,/**}",
+      "!.trae{,/**}",
+      "!dist{,/**}",
+      "!out{,/**}",
+      "!release{,/**}",
+      "!releases{,/**}",
+      "!app-out{,/**}",
+      "!app-build{,/**}",
+      "!node_modules{,/**}",
+      "!**/*.md"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "WEP-56",
+        "repo": "iiiwara---Unofficial-iwara-client"
+      }
+    ]
   }
 }

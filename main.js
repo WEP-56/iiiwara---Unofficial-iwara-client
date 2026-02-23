@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, session, net: electronNet } = require("electron");
+let autoUpdater = null;
 const path = require("path");
 const fs = require("fs");
 const net = require("net");
@@ -9,6 +10,17 @@ let iwaraSession;
 let apiToken = null;
 let globalProxy = null; // 全局代理地址
 let webRequestHeadersInstalled = false;
+
+const updateState = {
+  supported: false,
+  checking: false,
+  available: false,
+  downloaded: false,
+  currentVersion: null,
+  newVersion: null,
+  progress: null,
+  error: null,
+};
 
 const API_BASE_URL = "https://apiq.iwara.tv";
 const IWARA_BASE_URL = "https://www.iwara.tv";
@@ -425,12 +437,118 @@ function createWindow() {
     console.log("[renderer] did-fail-load", { errorCode, errorDescription, validatedURL, isMainFrame });
   });
 
-  // 自动打开 DevTools
-  mainWindow.webContents.openDevTools();
+  if (!app.isPackaged) {
+    mainWindow.webContents.openDevTools();
+  }
 
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
+}
+
+function initAutoUpdate() {
+  if (!app.isPackaged) return;
+  try {
+    autoUpdater = require("electron-updater").autoUpdater;
+  } catch (e) {
+    console.log("[update] electron-updater not available", e && e.message ? e.message : e);
+    return;
+  }
+
+  updateState.supported = true;
+  updateState.currentVersion = app.getVersion();
+  updateState.error = null;
+  updateState.checking = false;
+  updateState.available = false;
+  updateState.downloaded = false;
+  updateState.newVersion = null;
+  updateState.progress = null;
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on("error", (err) => {
+    const msg = err && err.message ? err.message : String(err);
+    updateState.error = msg;
+    updateState.checking = false;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("update-state", { ...updateState });
+    }
+    console.log("[update] error", msg);
+  });
+
+  autoUpdater.on("update-available", () => {
+    updateState.available = true;
+    updateState.checking = false;
+    updateState.error = null;
+    try {
+      const info = autoUpdater.updateInfo;
+      updateState.newVersion = info && info.version ? String(info.version) : updateState.newVersion;
+    } catch {}
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("update-state", { ...updateState });
+    }
+    console.log("[update] update available");
+  });
+
+  autoUpdater.on("update-not-available", () => {
+    updateState.available = false;
+    updateState.downloaded = false;
+    updateState.checking = false;
+    updateState.error = null;
+    updateState.newVersion = null;
+    updateState.progress = null;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("update-state", { ...updateState });
+    }
+    console.log("[update] update not available");
+  });
+
+  autoUpdater.on("checking-for-update", () => {
+    updateState.checking = true;
+    updateState.error = null;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("update-state", { ...updateState });
+    }
+    console.log("[update] checking");
+  });
+
+  autoUpdater.on("download-progress", (p) => {
+    try {
+      updateState.progress = {
+        percent: p && typeof p.percent === "number" ? p.percent : null,
+        transferred: p && typeof p.transferred === "number" ? p.transferred : null,
+        total: p && typeof p.total === "number" ? p.total : null,
+        bytesPerSecond: p && typeof p.bytesPerSecond === "number" ? p.bytesPerSecond : null,
+      };
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("update-state", { ...updateState });
+      }
+      console.log("[update] download", {
+        percent: p && typeof p.percent === "number" ? Math.round(p.percent * 10) / 10 : undefined,
+        transferred: p && p.transferred,
+        total: p && p.total,
+      });
+    } catch {}
+  });
+
+  autoUpdater.on("update-downloaded", async () => {
+    updateState.downloaded = true;
+    updateState.checking = false;
+    updateState.error = null;
+    try {
+      const info = autoUpdater.updateInfo;
+      updateState.newVersion = info && info.version ? String(info.version) : updateState.newVersion;
+    } catch {}
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("update-state", { ...updateState });
+    }
+    console.log("[update] downloaded");
+  });
+
+  try {
+    autoUpdater.checkForUpdates().catch(() => {});
+  } catch {}
 }
 
 // 初始化 Iwara 会话
@@ -489,6 +607,7 @@ app.whenReady().then(async () => {
     refreshAccessToken().catch(() => {});
   }
   createWindow();
+  initAutoUpdate();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -516,6 +635,63 @@ ipcMain.on("window-control", (event, action) => {
     }
   } else if (action === "close") {
     mainWindow.close();
+  }
+});
+
+ipcMain.handle("app-version", async () => {
+  try {
+    return { version: app.getVersion(), packaged: app.isPackaged };
+  } catch {
+    return { version: "0.0.0", packaged: false };
+  }
+});
+
+ipcMain.handle("update-get-state", async () => {
+  try {
+    if (!updateState.currentVersion) updateState.currentVersion = app.getVersion();
+  } catch {}
+  return { ...updateState };
+});
+
+ipcMain.handle("update-check", async () => {
+  if (!app.isPackaged || !autoUpdater) {
+    updateState.supported = false;
+    updateState.checking = false;
+    updateState.error = "仅打包版本支持自动更新";
+    try {
+      updateState.currentVersion = app.getVersion();
+    } catch {}
+    return { ...updateState };
+  }
+  updateState.supported = true;
+  updateState.error = null;
+  try {
+    updateState.currentVersion = app.getVersion();
+  } catch {}
+  try {
+    await autoUpdater.checkForUpdates();
+  } catch (e) {
+    updateState.checking = false;
+    updateState.error = e && e.message ? e.message : String(e);
+  }
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("update-state", { ...updateState });
+  }
+  return { ...updateState };
+});
+
+ipcMain.handle("update-install", async () => {
+  if (!app.isPackaged || !autoUpdater) {
+    return { ok: false, message: "仅打包版本支持自动更新" };
+  }
+  if (!updateState.downloaded) {
+    return { ok: false, message: "更新尚未下载完成" };
+  }
+  try {
+    autoUpdater.quitAndInstall();
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, message: e && e.message ? e.message : String(e) };
   }
 });
 

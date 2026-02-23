@@ -600,6 +600,59 @@ function toggleRating(){const p=document.getElementById('ratPanel');if(!p)return
 function closeRating(){const p=document.getElementById('ratPanel');if(p)p.classList.remove('open')}
 function toggleSidebar(){state.sidebarCollapsed=!state.sidebarCollapsed;const sb=document.getElementById('sb');if(sb)sb.classList.toggle('collapsed',state.sidebarCollapsed);const tog=document.getElementById('sbTog');if(tog)tog.textContent=state.sidebarCollapsed?'›':'‹'}
 
+function toggleUpdatePanel(){
+  const p=document.getElementById('updPanel')
+  if(!p)return
+  const isOpen=p.classList.toggle('open')
+  if(!isOpen)return
+  syncUpdateUi().catch(()=>{})
+}
+function closeUpdatePanel(){const p=document.getElementById('updPanel');if(p)p.classList.remove('open')}
+
+function fmtBytes(n){
+  const v=typeof n==='number'&&Number.isFinite(n)?n:0
+  if(v<=0)return'0B'
+  const units=['B','KB','MB','GB']
+  let u=0
+  let x=v
+  while(x>=1024&&u<units.length-1){x/=1024;u++}
+  return`${Math.round(x*10)/10}${units[u]}`
+}
+
+function applyUpdateStateToUi(st){
+  const cur=document.getElementById('updCurVer')
+  const nv=document.getElementById('updNewVer')
+  const msg=document.getElementById('updMsg')
+  const installBtn=document.getElementById('updInstallBtn')
+  if(cur)cur.textContent=st?.currentVersion||'—'
+  if(nv)nv.textContent=st?.newVersion||'—'
+  if(msg){
+    if(st?.checking)msg.textContent='正在检查更新…'
+    else if(st?.error)msg.textContent=String(st.error)
+    else if(st?.downloaded)msg.textContent='更新已下载，可重启安装'
+    else if(st?.available){
+      const p=st?.progress
+      if(p&&typeof p.percent==='number'){
+        const pct=`${Math.round(p.percent*10)/10}%`
+        const extra=p.total?`（${fmtBytes(p.transferred)}/${fmtBytes(p.total)}）`:''
+        msg.textContent=`正在下载… ${pct}${extra}`
+      }else msg.textContent='发现新版本，正在下载…'
+    }else msg.textContent=st?.supported===false?'仅打包版本支持自动更新':'已是最新版本'
+  }
+  if(installBtn)installBtn.disabled=!(st&&st.downloaded)
+}
+
+async function syncUpdateUi(){
+  const upd=window.electronAPI
+  if(!upd||!upd.getAppVersion||!upd.updateGetState)return
+  try{
+    const st=await upd.updateGetState()
+    applyUpdateStateToUi(st)
+  }catch(e){
+    applyUpdateStateToUi({supported:false,checking:false,available:false,downloaded:false,currentVersion:'—',newVersion:'—',error:String(e?.message||e)})
+  }
+}
+
 async function doLogin(){try{state.page='profile';document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));await renderPageInitial();const em=document.getElementById('loginEmail');if(em&&!state.auth.hasAccess)em.focus();return{success:true}}catch(e){setStatus(String(e.message||e),true);return{success:false}}}
 
 function bindForumEvents(){
@@ -844,6 +897,35 @@ document.addEventListener('DOMContentLoaded',async()=>{
   const themeBtn=document.getElementById('themeBtn')
   if(themeBtn)themeBtn.addEventListener('click',()=>applyPalette(nextPaletteKey(state.palette)))
 
+  const updateBtn=document.getElementById('updateBtn')
+  if(updateBtn)updateBtn.addEventListener('click',toggleUpdatePanel)
+
+  const updCheckBtn=document.getElementById('updCheckBtn')
+  if(updCheckBtn)updCheckBtn.addEventListener('click',async()=>{
+    try{
+      const st=await window.electronAPI.updateCheck()
+      applyUpdateStateToUi(st)
+    }catch(e){
+      applyUpdateStateToUi({supported:false,checking:false,available:false,downloaded:false,currentVersion:'—',newVersion:'—',error:String(e?.message||e)})
+    }
+  })
+
+  const updInstallBtn=document.getElementById('updInstallBtn')
+  if(updInstallBtn)updInstallBtn.addEventListener('click',async()=>{
+    try{
+      const r=await window.electronAPI.updateInstall()
+      if(!r?.ok)applyUpdateStateToUi({supported:true,checking:false,available:true,downloaded:true,currentVersion:document.getElementById('updCurVer')?.textContent||'—',newVersion:document.getElementById('updNewVer')?.textContent||'—',error:r?.message||'安装失败'})
+    }catch(e){
+      applyUpdateStateToUi({supported:true,checking:false,available:true,downloaded:true,currentVersion:document.getElementById('updCurVer')?.textContent||'—',newVersion:document.getElementById('updNewVer')?.textContent||'—',error:String(e?.message||e)})
+    }
+  })
+
+  if(window.electronAPI.onUpdateState){
+    window.electronAPI.onUpdateState((st)=>{
+      applyUpdateStateToUi(st)
+    })
+  }
+
   const sbTog=document.getElementById('sbTog')
   if(sbTog)sbTog.addEventListener('click',toggleSidebar)
 
@@ -865,7 +947,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
     if(e.key==='Escape'){
       if(state.detail.open)closeDetail()
       else if(['watch','videoDetail','imageDetail','thread','user'].includes(state.page))goBack()
-      else closeRating()
+      else{closeRating();closeUpdatePanel()}
     }
     if(!state.detail.open)return
     if(state.detail.type==='image'){
@@ -874,6 +956,16 @@ document.addEventListener('DOMContentLoaded',async()=>{
       if(e.key==='0')resetImageTransform()
     }
   })
+
+  document.addEventListener('click',(e)=>{
+    const p=document.getElementById('updPanel')
+    if(!p||!p.classList.contains('open'))return
+    const t=e.target
+    const btn=document.getElementById('updateBtn')
+    if(p.contains(t))return
+    if(btn&&btn.contains(t))return
+    closeUpdatePanel()
+  },true)
 
   await syncAuthState()
 

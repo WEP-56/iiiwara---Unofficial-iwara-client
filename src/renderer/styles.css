@@ -156,6 +156,19 @@ button,input,select,textarea{font:inherit}
 .toggle::after{content:'';position:absolute;width:11px;height:11px;border-radius:50%;background:#fff;top:2px;left:2px;transition:transform .18s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
 .toggle.on::after{transform:translateX(13px)}
 .rat-note{font-size:10px;color:var(--t2);line-height:1.5;padding-top:8px;border-top:1px solid var(--b0);margin-top:2px}
+.upd-panel{position:fixed;right:12px;top:42px;width:240px;background:var(--g-bg);backdrop-filter:var(--blur);border:1px solid var(--b1);border-radius:var(--r-lg);padding:12px 14px;box-shadow:0 16px 48px rgba(0,0,0,.5);z-index:220;display:none}
+.upd-panel.open{display:block}
+.upd-title{font-size:11px;font-weight:600;color:var(--t0);margin-bottom:10px;letter-spacing:.02em}
+.upd-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.upd-k{font-size:10.5px;color:var(--t2);font-family:var(--font-mono)}
+.upd-v{font-size:10.5px;color:var(--t1);font-family:var(--font-mono)}
+.upd-msg{margin-top:8px;padding-top:8px;border-top:1px solid var(--b0);font-size:11px;color:var(--t2);line-height:1.5;min-height:32px}
+.upd-actions{display:flex;gap:8px;margin-top:10px}
+.upd-btn{height:28px;padding:0 10px;border-radius:8px;border:1px solid var(--b1);background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,0));color:var(--t1);cursor:pointer;transition:transform var(--dur-1),border-color var(--dur-1),color var(--dur-1),background var(--dur-1),filter var(--dur-1);font-family:var(--font-ui);flex:1}
+.upd-btn:hover{border-color:var(--b2);color:var(--t0);background:var(--bg-3)}
+.upd-btn:active{transform:translateY(1px)}
+.upd-btn.pri{background:var(--ac);border-color:transparent;color:#fff}
+.upd-btn.pri:hover{filter:brightness(1.05)}
 .statusbar{height:22px;flex-shrink:0;display:flex;align-items:center;padding:0 12px;gap:10px;background:var(--g-bg);backdrop-filter:var(--blur);border-top:1px solid var(--b0)}
 .st{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--t2);font-family:var(--font-mono)}
 .st-dot{width:5px;height:5px;border-radius:50%;background:#4ade80;animation:blink 3s infinite}

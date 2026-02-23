@@ -18,7 +18,7 @@
       <div class="tb-mid">iwara</div>
       <div class="tb-right">
         <div class="tb-pill" id="themeBtn">blue</div>
-        <div class="tb-pill" id="versionPill">0.1.0</div>
+        <div class="tb-pill" id="updateBtn">更新</div>
       </div>
     </div>
 
@@ -106,6 +106,17 @@
       <div class="toggle" data-rating="adult"></div>
     </div>
     <div class="rat-note">全局生效，将影响列表请求。</div>
+  </div>
+
+  <div class="upd-panel" id="updPanel">
+    <div class="upd-title">更新</div>
+    <div class="upd-row"><span class="upd-k">当前版本</span><span class="upd-v" id="updCurVer">—</span></div>
+    <div class="upd-row"><span class="upd-k">最新版本</span><span class="upd-v" id="updNewVer">—</span></div>
+    <div class="upd-msg" id="updMsg">—</div>
+    <div class="upd-actions">
+      <button class="upd-btn" id="updCheckBtn">检查更新</button>
+      <button class="upd-btn pri" id="updInstallBtn">重启安装</button>
+    </div>
   </div>
 
   <script type="module" src="renderer.js"></script>

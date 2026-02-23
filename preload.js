@@ -22,4 +22,28 @@ contextBridge.exposeInMainWorld("electronAPI", {
   authStatus: async () => {
     return await ipcRenderer.invoke("auth-status");
   },
+
+  getAppVersion: async () => {
+    return await ipcRenderer.invoke("app-version");
+  },
+
+  updateCheck: async () => {
+    return await ipcRenderer.invoke("update-check");
+  },
+
+  updateGetState: async () => {
+    return await ipcRenderer.invoke("update-get-state");
+  },
+
+  updateInstall: async () => {
+    return await ipcRenderer.invoke("update-install");
+  },
+
+  onUpdateState: (cb) => {
+    const handler = (_evt, payload) => {
+      try { cb(payload); } catch {}
+    };
+    ipcRenderer.on("update-state", handler);
+    return () => ipcRenderer.removeListener("update-state", handler);
+  },
 });
