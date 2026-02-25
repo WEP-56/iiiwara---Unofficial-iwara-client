@@ -129,7 +129,7 @@ async function toggleVideoLike(ctx){
   renderVideoDetailPanel(ctx)
   try{
     const ep=endpoints.likeVideo(state.view.id)
-    const res=nextLiked?await apiPost(ep,null,null,{skipAuthWait:true,silent:true}):await apiDelete(ep,null,{skipAuthWait:true,silent:true})
+    const res=nextLiked?await apiPost(ep,undefined,undefined,{skipAuthWait:true,silent:true}):await apiDelete(ep,undefined,{skipAuthWait:true,silent:true})
     if(res?.error)throw new Error(res.message||'request failed')
     setStatus(nextLiked?'liked':'unliked',false)
   }catch(e){
@@ -176,10 +176,7 @@ function bindVideoDetailPageEvents(ctx){
   content.addEventListener('click',async(e)=>{
     const side=e.target?.closest?.('#sideToggleBtn')
     if(side){
-      state.view.sideCollapsed=!state.view.sideCollapsed
-      const right=document.querySelector('.watch-right')
-      if(right)right.classList.toggle('collapsed',!!state.view.sideCollapsed)
-      side.textContent=state.view.sideCollapsed?'‹':'›'
+      toggleWatchSidebar(side)
       return
     }
     const tabEl=e.target?.closest?.('[data-wtab]')
@@ -194,6 +191,13 @@ function bindVideoDetailPageEvents(ctx){
       renderVideoDetailPanel(ctx)
     }
   })
+}
+
+function toggleWatchSidebar(btn){
+  const right=document.querySelector('.watch-right')
+  if(!right)return
+  const isCollapsed=right.classList.toggle('collapsed')
+  if(btn)btn.textContent=isCollapsed?'‹':'›'
 }
 
 async function loadVideoDetailView(ctx){

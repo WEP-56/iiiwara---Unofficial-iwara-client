@@ -3,7 +3,18 @@ export async function renderAccountPage(ctx,{token}={}){
   const content=document.getElementById('content')
   if(!content)return
 
-  content.innerHTML=profilePageHtml(ctx)
+  // 如果没有登录且已保存了凭证，显示提示
+  let savedEmail=null
+  if(!state.auth.hasAccess){
+    try{
+      const saved=await window.electronAPI?.authGetSavedCredentials?.()
+      if(saved?.success){
+        savedEmail=saved.email
+      }
+    }catch{}
+  }
+
+  content.innerHTML=profilePageHtml(ctx,{savedEmail})
   bindAccountEvents(ctx)
 
   if(state.auth.hasAccess){
@@ -27,7 +38,7 @@ function profilePaneHtml(ctx){
   return `<div class="create-page" style="padding:18px 0"><div class="create-sub">${title}</div><div id="profilePaneBody" style="margin-top:10px"><div class="detail-loading">加载中…</div></div></div>`
 }
 
-function profilePageHtml(ctx){
+function profilePageHtml(ctx,{savedEmail}={}){
   const { state, escapeHtml, escapeAttr, pageContainerHtml, meName, meUsername, meAvatarUrl, meAvatarLetter }=ctx
   if(state.auth.hasAccess){
     const name=escapeHtml(meName())
@@ -42,7 +53,9 @@ function profilePageHtml(ctx){
     const notifications=t(state.meCounts?.notifications)
     return pageContainerHtml(`<div class="profile-header"><div class="profile-av">${avImg}${av}</div><div class="profile-info"><div class="profile-name">${name}</div><div class="profile-meta">${meta}</div></div><div class="profile-stats"><div class="profile-stat"><div class="profile-stat-n">${following}</div><div class="profile-stat-l">订阅</div></div><div class="profile-stat"><div class="profile-stat-n">${followers}</div><div class="profile-stat-l">粉丝</div></div><div class="profile-stat"><div class="profile-stat-n">${notifications}</div><div class="profile-stat-l">通知</div></div></div></div><div id="profilePane">${profilePaneHtml(ctx)}</div><div class="create-page" style="padding:10px 0 22px"><button class="create-btn" id="profileLogoutBtn" style="background:rgba(255,255,255,.08);border:1px solid var(--b0);color:var(--t1)">退出登录</button></div>`)
   }
-  return pageContainerHtml(`<div class="profile-header"><div class="profile-av">G</div><div class="profile-info"><div class="profile-name">Guest</div><div class="profile-meta">未登录</div></div><div class="profile-stats"><div class="profile-stat"><div class="profile-stat-n">—</div><div class="profile-stat-l">订阅</div></div><div class="profile-stat"><div class="profile-stat-n">—</div><div class="profile-stat-l">粉丝</div></div><div class="profile-stat"><div class="profile-stat-n">—</div><div class="profile-stat-l">通知</div></div></div></div><div id="profilePane"><div class="create-page" style="padding:22px 0"><div class="create-sub">登录后查看个人内容</div><div class="search-box" style="margin-top:12px"><span class="sico">@</span><input id="loginEmail" placeholder="邮箱"></div><div class="search-box" style="margin-top:10px"><span class="sico">＊</span><input id="loginPassword" placeholder="密码" type="password"></div><div id="loginErr" style="margin-top:10px;font-size:12px;color:#f87171;min-height:16px"></div><button class="create-btn" id="profileDoLoginBtn" style="margin-top:6px">登录</button></div></div>`)
+  const emailPlaceholder=savedEmail?savedEmail:'邮箱'
+  const emailHint=savedEmail?`<div style="font-size:12px;color:var(--t2);margin-top:4px">已保存的账号: ${escapeHtml(savedEmail)}</div>`:''
+  return pageContainerHtml(`<div class="profile-header"><div class="profile-av">G</div><div class="profile-info"><div class="profile-name">Guest</div><div class="profile-meta">未登录</div></div><div class="profile-stats"><div class="profile-stat"><div class="profile-stat-n">—</div><div class="profile-stat-l">订阅</div></div><div class="profile-stat"><div class="profile-stat-n">—</div><div class="profile-stat-l">粉丝</div></div><div class="profile-stat"><div class="profile-stat-n">—</div><div class="profile-stat-l">通知</div></div></div></div><div id="profilePane"><div class="create-page" style="padding:22px 0"><div class="create-sub">登录后查看个人内容</div><div class="search-box" style="margin-top:12px"><span class="sico">@</span><input id="loginEmail" placeholder="${escapeAttr(emailPlaceholder)}" value="${escapeAttr(savedEmail||'')}"></div>${emailHint}<div class="search-box" style="margin-top:10px"><span class="sico">＊</span><input id="loginPassword" placeholder="密码" type="password"></div><div id="loginErr" style="margin-top:10px;font-size:12px;color:#f87171;min-height:16px"></div><button class="create-btn" id="profileDoLoginBtn" style="margin-top:6px">登录</button></div></div>`)
 }
 
 async function ensureProfileCountsLoaded(ctx,{token}={}){

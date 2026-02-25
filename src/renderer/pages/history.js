@@ -4,7 +4,7 @@ import { getHistory, removeHistory, clearHistory, formatRelativeTime, groupByTim
 const PAGE_SIZE = 24;
 
 export async function renderHistoryPage(ctx, host) {
-  const { state, escapeHtml, escapeAttr, openVideoDetail, openImageDetail } = ctx;
+  const { state, escapeHtml, escapeAttr, openVideoDetail, openImageDetail, openForumThreadDetail } = ctx;
   
   if (!host) return;
   
@@ -64,7 +64,7 @@ function historyPageHtml(ctx) {
 
 function historyCardHtml(item, ctx) {
   const { escapeHtml, escapeAttr } = ctx;
-  const { id, type, contentId, title, thumbnail, author, authorId, rating, visitedAt, visitCount } = item;
+  const { id, type, contentId, title, thumbnail, author, authorId, rating, visitedAt, visitCount, categoryId } = item;
   
   const timeText = formatRelativeTime(visitedAt);
   const typeIcon = type === 'video' ? '▶' : type === 'image' ? '📷' : '💬';
@@ -85,9 +85,10 @@ function historyCardHtml(item, ctx) {
     : `<div class="history-thumb-placeholder">${typeIcon}</div>`;
   
   const dataAttr = type === 'video' ? 'data-video-id' : type === 'image' ? 'data-image-id' : 'data-thread-id';
+  const categoryAttr = type === 'thread' && categoryId ? ` data-category-id="${escapeAttr(categoryId)}"` : '';
   
   return `
-    <div class="history-card${ratingClass}" ${dataAttr}="${escapeAttr(contentId)}" data-history-id="${escapeAttr(id)}">
+    <div class="history-card${ratingClass}" ${dataAttr}="${escapeAttr(contentId)}" data-history-id="${escapeAttr(id)}"${categoryAttr}>
       <div class="history-card-thumb">
         ${thumbHtml}
         <div class="history-card-type">${typeIcon}</div>
@@ -236,7 +237,7 @@ function bindHistoryEvents(ctx, host) {
 }
 
 function bindCardEvents(ctx, host) {
-  const { openVideoDetail, openImageDetail, openUserDetail } = ctx;
+  const { openVideoDetail, openImageDetail, openUserDetail, openForumThreadDetail } = ctx;
   
   // Card click - open detail
   host.querySelectorAll('.history-card').forEach(card => {
@@ -247,13 +248,11 @@ function bindCardEvents(ctx, host) {
       const videoId = card.dataset.videoId;
       const imageId = card.dataset.imageId;
       const threadId = card.dataset.threadId;
+      const categoryId = card.dataset.categoryId;
       
       if (videoId && openVideoDetail) openVideoDetail(videoId);
       else if (imageId && openImageDetail) openImageDetail(imageId);
-      else if (threadId) {
-        // Thread detail not implemented yet, show alert
-        console.log('[History] Thread detail not implemented:', threadId);
-      }
+      else if (threadId && openForumThreadDetail) openForumThreadDetail(categoryId || '', threadId);
     });
   });
   

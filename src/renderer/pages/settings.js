@@ -7,53 +7,116 @@ export async function renderSettingsPage(ctx){
   let saved={}
   try{ saved=JSON.parse(localStorage.getItem('iwara_settings')||'{}') }catch{}
 
-  const rows=[
-    {id:'borderless',label:'无边框窗口',on:!!saved.borderless},
-    {id:'blur',label:'毛玻璃效果',on:saved.blur!==false}, // 默认为 true
-    {id:'topmost',label:'始终置顶',on:!!saved.topmost},
-    {id:'hwaccel',label:'硬件加速解码',on:saved.hwaccel!==false},
-    {id:'preload',label:'预加载缩略图',on:saved.preload!==false},
-    {id:'antiTrack',label:'阻止追踪脚本',on:saved.antiTrack!==false},
-    {id:'muteStart',label:'默认静音启动',on:!!saved.muteStart}
-  ]
-
-  const rowsHtml=rows.map(r=>`
-    <div class="fitem" style="margin-bottom:2px">
-      <div class="fbody">
-        <div class="ftitle">${escapeHtml(r.label)}</div>
-      </div>
-      <div class="toggle ${r.on?'on':''}" data-setting-id="${r.id}"></div>
-    </div>
-  `).join('')
-
+  // ==================== 1. 外观设置 ====================
   const paletteHtml=ctx.PALETTES.map(p=>`
     <div class="palette-item ${ctx.state.palette===p.key?'active':''}" data-palette="${p.key}" style="background:${p.ac}" title="${p.label}"></div>
   `).join('')
 
+  const appearanceHtml=`
+    <div class="sh"><div class="sh-t">外观设置</div></div>
+    <div class="fitem" style="margin-bottom:12px">
+      <div class="fbody"><div class="ftitle">配色方案</div><div class="fsub">选择应用的主题色</div></div>
+      <div class="palette-list">${paletteHtml}<div class="palette-item custom" id="customColorBtn" title="自定义颜色">＋</div></div>
+    </div>
+    ${createSelectItem('uiScale','界面缩放比例',['100%','125%','150%'],saved.uiScale||'100%')}
+    ${createSelectItem('sidebarDefault','侧边栏默认状态',['展开','收起'],saved.sidebarDefault||'展开')}
+  `
+
+  // ==================== 2. 内容过滤 ====================
+  const contentFilterHtml=`
+    <div class="sh"><div class="sh-t">内容过滤</div></div>
+    ${createSelectItem('defaultGrade','默认分级过滤',['General','Ecchi','Adult'],saved.defaultGrade||'Adult')}
+    ${createSelectItem('defaultSort','默认排序方式',['热门','最新','趋势'],saved.defaultSort||'热门')}
+    ${createSelectItem('perPageCount','每页加载数量',['16','32','48'],saved.perPageCount||'32')}
+  `
+
+  // ==================== 3. 播放与浏览 ====================
+  const playbackHtml=`
+    <div class="sh"><div class="sh-t">播放与浏览</div></div>
+    ${createSelectItem('videoQuality','视频默认画质',['Source','1080p','720p','480p'],saved.videoQuality||'Source')}
+    ${createToggleItem('autoPlayNext','自动播放下一个',saved.autoPlayNext!==false)}
+    ${createToggleItem('preload','预加载缩略图',saved.preload!==false)}
+    ${createSelectItem('imageViewerZoom','图片查看器默认缩放模式',['适应窗口','原始大小'],saved.imageViewerZoom||'适应窗口')}
+  `
+
+  // ==================== 4. 网络设置 ====================
+  const networkHtml=`
+    <div class="sh"><div class="sh-t">网络设置</div></div>
+    ${createSelectItem('proxyMode','代理设置',['自动检测','手动配置','禁用'],saved.proxyMode||'自动检测')}
+    <div class="fitem proxy-config" style="margin-bottom:2px;${saved.proxyMode!=='手动配置'?'display:none':''}">
+      <div class="fbody">
+        <div class="ftitle">代理地址</div>
+        <div class="fsub">格式: host:port</div>
+      </div>
+      <input type="text" id="proxyAddress" value="${saved.proxyAddress||''}" style="background:var(--bg-2);border:1px solid var(--b0);border-radius:4px;padding:4px 8px;font-size:12px;color:var(--t0);width:140px;text-align:right">
+    </div>
+    ${createSelectItem('requestTimeout','请求超时时间',['10秒','20秒','30秒','60秒'],saved.requestTimeout||'30秒')}
+    ${createSelectItem('concurrentLimit','并发请求数限制',['3','5','10','20'],saved.concurrentLimit||'5')}
+  `
+
+  // ==================== 5. 隐私与安全 ====================
+  const privacyHtml=`
+    <div class="sh"><div class="sh-t">隐私与安全</div></div>
+    ${createToggleItem('clearHistoryOnExit','退出时清除浏览历史',!!saved.clearHistoryOnExit)}
+    ${createToggleItem('rememberLogin','记住登录状态',saved.rememberLogin!==false)}
+    ${createToggleItem('antiTrack','阻止追踪脚本',saved.antiTrack!==false)}
+    <div class="fitem" id="clearCacheBtn">
+      <div class="fbody"><div class="ftitle">清除缓存/Cookie</div><div class="fsub">清除应用缓存和 Cookie 数据</div></div>
+      <div class="fright">清除 ›</div>
+    </div>
+  `
+
+  // ==================== 6. 应用设置 ====================
+  const appSettingsHtml=`
+    <div class="sh"><div class="sh-t">应用设置</div></div>
+    ${createToggleItem('startMinimized','启动时最小化到托盘',!!saved.startMinimized)}
+    ${createToggleItem('hwaccel','硬件加速',saved.hwaccel!==false)}
+    ${createToggleItem('autoStart','开机自启动',!!saved.autoStart)}
+    <div class="fitem" id="downloadPathBtn">
+      <div class="fbody"><div class="ftitle">下载保存路径</div><div class="fsub">${saved.downloadPath||'点击选择路径'}</div></div>
+      <div class="fright">选择 ›</div>
+    </div>
+    ${createToggleItem('borderless','无边框窗口',!!saved.borderless)}
+    ${createToggleItem('blur','毛玻璃效果',saved.blur!==false)}
+    ${createToggleItem('topmost','始终置顶',!!saved.topmost)}
+    ${createToggleItem('muteStart','默认静音启动',!!saved.muteStart)}
+  `
+
+  // ==================== 7. 实验性功能 ====================
+  const experimentalHtml=`
+    <div class="sh"><div class="sh-t">实验性功能</div></div>
+    ${createToggleItem('devToolsShortcut','启用开发者工具快捷键',!!saved.devToolsShortcut)}
+  `
+
+  // ==================== 快捷键配置 ====================
+  const shortcutHtml=`
+    <div class="sh"><div class="sh-t">快捷键</div></div>
+    <div class="fitem" id="shortcutConfigBtn">
+      <div class="fbody"><div class="ftitle">键盘快捷键自定义</div><div class="fsub">设置播放控制、页面导航等快捷键</div></div>
+      <div class="fright">配置 ›</div>
+    </div>
+  `
+
+  // ==================== 网络测试 ====================
+  const networkTestHtml=`
+    <div class="sh"><div class="sh-t">网络与调试</div></div>
+    <div class="fitem" id="proxyTestBtn">
+      <div class="fbody"><div class="ftitle">代理连通性测试</div><div class="fsub">测试与 iwara.tv 的连接速度</div></div>
+      <div class="fright">开始 ›</div>
+    </div>
+  `
+
   content.innerHTML=pageContainerHtml(`
     <div style="max-width:480px">
-      <div class="sh"><div class="sh-t">外观设置</div></div>
-      <div class="fitem" style="margin-bottom:12px">
-        <div class="fbody"><div class="ftitle">配色方案</div><div class="fsub">选择应用的主题色</div></div>
-        <div class="palette-list">${paletteHtml}<div class="palette-item custom" id="customColorBtn" title="自定义颜色">＋</div></div>
-      </div>
-      <div class="flist">${rowsHtml}</div>
-      
-      <div style="margin-top:20px">
-        <div class="sh"><div class="sh-t">快捷键</div></div>
-        <div class="fitem">
-          <div class="fbody"><div class="ftitle">键盘快捷键自定义</div><div class="fsub">设置播放控制、页面导航等快捷键</div></div>
-          <div class="fright">配置 ›</div>
-        </div>
-      </div>
-
-      <div style="margin-top:20px">
-        <div class="sh"><div class="sh-t">网络与调试</div></div>
-        <div class="fitem" id="proxyTestBtn">
-          <div class="fbody"><div class="ftitle">代理连通性测试</div><div class="fsub">测试与 iwara.tv 的连接速度</div></div>
-          <div class="fright">开始 ›</div>
-        </div>
-      </div>
+      ${appearanceHtml}
+      <div style="margin-top:20px">${contentFilterHtml}</div>
+      <div style="margin-top:20px">${playbackHtml}</div>
+      <div style="margin-top:20px">${networkHtml}</div>
+      <div style="margin-top:20px">${privacyHtml}</div>
+      <div style="margin-top:20px">${appSettingsHtml}</div>
+      <div style="margin-top:20px">${experimentalHtml}</div>
+      <div style="margin-top:20px">${shortcutHtml}</div>
+      <div style="margin-top:20px">${networkTestHtml}</div>
 
       <div style="margin-top:20px;padding:10px 12px;background:var(--bg-2);border:1px solid var(--b0);border-radius:var(--r-sm);">
         <div style="font-size:11px;color:var(--t2);line-height:1.7">iwara 本地客户端<br>基于 Electron · 数据来源 iwara.tv</div>
@@ -62,6 +125,176 @@ export async function renderSettingsPage(ctx){
   `)
 
   bindSettingsEvents(ctx)
+}
+
+// 辅助函数：创建选择型设置项
+function createSelectItem(id,label,options,defaultValue){
+  const optionsHtml=options.map(opt=>`<option value="${opt}" ${opt===defaultValue?'selected':''}>${opt}</option>`).join('')
+  return`
+    <div class="fitem" style="margin-bottom:2px">
+      <div class="fbody"><div class="ftitle">${label}</div></div>
+      <select id="${id}" style="background:var(--bg-2);border:1px solid var(--b0);border-radius:4px;padding:4px 8px;font-size:12px;color:var(--t0);cursor:pointer">${optionsHtml}</select>
+    </div>
+  `
+}
+
+// 辅助函数：创建开关型设置项
+function createToggleItem(id,label,isOn){
+  return`
+    <div class="fitem" style="margin-bottom:2px">
+      <div class="fbody"><div class="ftitle">${label}</div></div>
+      <div class="toggle ${isOn?'on':''}" data-setting-id="${id}"></div>
+    </div>
+  `
+}
+
+// 默认快捷键配置
+const DEFAULT_SHORTCUTS={
+  'playPause':'Space',
+  'prevVideo':'ArrowLeft',
+  'nextVideo':'ArrowRight',
+  'volumeUp':'ArrowUp',
+  'volumeDown':'ArrowDown',
+  'mute':'M',
+  'fullscreen':'F',
+  'escape':'Escape',
+  'search':'Ctrl+KeyK',
+  'home':'Ctrl+KeyH',
+  'history':'Ctrl+KeyY',
+  'settings':'Ctrl+Comma',
+  'back':'Alt+ArrowLeft',
+  'forward':'Alt+ArrowRight'
+}
+
+const SHORTCUT_LABELS={
+  'playPause':'播放/暂停',
+  'prevVideo':'上一个视频',
+  'nextVideo':'下一个视频',
+  'volumeUp':'音量增加',
+  'volumeDown':'音量减少',
+  'mute':'静音切换',
+  'fullscreen':'全屏切换',
+  'escape':'退出/返回',
+  'search':'搜索',
+  'home':'首页',
+  'history':'历史记录',
+  'settings':'设置',
+  'back':'后退',
+  'forward':'前进'
+}
+
+function openShortcutConfig(ctx){
+  const saved=JSON.parse(localStorage.getItem('iwara_shortcuts')||'{}')
+  const shortcuts={...DEFAULT_SHORTCUTS,...saved}
+  
+  const itemsHtml=Object.entries(shortcuts).map(([id,key])=>{
+    const label=SHORTCUT_LABELS[id]||id
+    return`
+      <div class="shortcut-item" data-id="${id}" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg-2);border-radius:6px;margin-bottom:6px;cursor:pointer">
+        <span style="font-size:13px;color:var(--t0)">${label}</span>
+        <span class="shortcut-key" style="font-size:12px;color:var(--t2);background:var(--bg-3);padding:4px 10px;border-radius:4px;font-family:monospace">${formatKeyDisplay(key)}</span>
+      </div>
+    `
+  }).join('')
+
+  const html=`
+    <div class="create-page" style="padding:10px 0">
+      <div class="create-sub">快捷键配置</div>
+      <div style="margin-top:12px;font-size:11px;color:var(--t2);padding:0 4px 8px">点击快捷键项后按下新的组合键进行修改</div>
+      <div style="max-height:400px;overflow-y:auto">${itemsHtml}</div>
+      <div style="margin-top:15px;display:flex;gap:10px">
+        <button class="create-btn" id="resetShortcuts" style="flex:1;background:var(--bg-3)">恢复默认</button>
+        <button class="create-btn" id="closeShortcutConfig" style="flex:1">关闭</button>
+      </div>
+    </div>
+  `
+
+  if(ctx.openDetailShell){
+    ctx.openDetailShell('快捷键')
+    ctx.setDetailTitle('快捷键配置')
+    ctx.setDetailBodyHtml(html)
+    
+    let activeItem=null
+    
+    // 点击快捷键项进行修改
+    document.querySelectorAll('.shortcut-item').forEach(el=>{
+      el.addEventListener('click',()=>{
+        if(activeItem)activeItem.style.outline=''
+        activeItem=el
+        el.style.outline='2px solid var(--ac)'
+        const keyEl=el.querySelector('.shortcut-key')
+        if(keyEl)keyEl.textContent='按下新快捷键...'
+        
+        const handler=(e)=>{
+          e.preventDefault()
+          e.stopPropagation()
+          
+          const parts=[]
+          if(e.ctrlKey)parts.push('Ctrl')
+          if(e.altKey)parts.push('Alt')
+          if(e.shiftKey)parts.push('Shift')
+          if(e.metaKey)parts.push('Meta')
+          
+          // 忽略单独的修饰键
+          if(['Control','Alt','Shift','Meta'].includes(e.code))return
+          
+          parts.push(e.code)
+          const newKey=parts.join('+')
+          
+          const id=el.getAttribute('data-id')
+          shortcuts[id]=newKey
+          
+          if(keyEl)keyEl.textContent=formatKeyDisplay(newKey)
+          el.style.outline=''
+          activeItem=null
+          
+          document.removeEventListener('keydown',handler,true)
+        }
+        
+        document.addEventListener('keydown',handler,true)
+      })
+    })
+    
+    // 恢复默认
+    document.getElementById('resetShortcuts')?.addEventListener('click',()=>{
+      localStorage.removeItem('iwara_shortcuts')
+      ctx.closeDetail()
+      openShortcutConfig(ctx)
+    })
+    
+    // 关闭
+    document.getElementById('closeShortcutConfig')?.addEventListener('click',()=>{
+      // 保存配置
+      const toSave={}
+      Object.entries(shortcuts).forEach(([id,key])=>{
+        if(key!==DEFAULT_SHORTCUTS[id])toSave[id]=key
+      })
+      if(Object.keys(toSave).length>0){
+        localStorage.setItem('iwara_shortcuts',JSON.stringify(toSave))
+      }else{
+        localStorage.removeItem('iwara_shortcuts')
+      }
+      ctx.closeDetail()
+    })
+  }
+}
+
+function formatKeyDisplay(key){
+  return key
+    .replace('Key','')
+    .replace('Arrow','')
+    .replace('Digit','')
+    .replace('Numpad','Num ')
+    .replace('Space','空格')
+    .replace('Escape','Esc')
+    .replace('Comma',',')
+    .replace('Period','.')
+    .replace('Slash','/')
+    .replace('Backslash','\\')
+    .replace('BracketLeft','[')
+    .replace('BracketRight',']')
+    .replace('Minus','-')
+    .replace('Equal','=')
 }
 
 function openCustomColorPicker(ctx){
@@ -86,8 +319,6 @@ function openCustomColorPicker(ctx){
       </div>
     </div>
   `
-  const { openDetailShell, setDetailTitle, setDetailBodyHtml, closeDetail } = navCtx // 需要从外部获取或通过 ctx 传递
-  // 暂时先用最简单的方式：修改 ctx 传递 nav 核心
   if(ctx.openDetailShell){
     ctx.openDetailShell('配色')
     ctx.setDetailTitle('自定义配色')
@@ -115,20 +346,52 @@ function openCustomColorPicker(ctx){
       state.paletteCustom=hex
       state.palette='custom'
       
-      // 构造一个临时的 palette 对象并应用
+      // 将 hex 转换为 RGB
+      const r=parseInt(hex.slice(1,3),16)
+      const g=parseInt(hex.slice(3,5),16)
+      const b=parseInt(hex.slice(5,7),16)
+      
+      // 构造一个完整的 palette 对象并应用
       const customP={
         key:'custom',
         label:'custom',
         ac:hex,
-        dim:hex+'1c', 
-        bd:hex+'42',  
-        glow1:hex+'24',
-        glow2:hex+'1a'
+        dim:`rgba(${r},${g},${b},.11)`,
+        bd:`rgba(${r},${g},${b},.26)`,
+        glow1:`rgba(${r},${g},${b},.14)`,
+        glow2:`rgba(${r},${g},${b},.10)`,
+        // 背景色：基于主色调的深色版本
+        bg1:`rgb(${Math.floor(r*0.05)},${Math.floor(g*0.05)},${Math.floor(b*0.08)})`,
+        bg2:`rgb(${Math.floor(r*0.08)},${Math.floor(g*0.08)},${Math.floor(b*0.12)})`,
+        bg3:`rgb(${Math.floor(r*0.12)},${Math.floor(g*0.12)},${Math.floor(b*0.18)})`,
+        // 边框色
+        b0:`rgba(${r},${g},${b},.08)`,
+        b1:`rgba(${r},${g},${b},.15)`,
+        // 文字色
+        t0:`rgb(${Math.min(255,r+120)},${Math.min(255,g+120)},${Math.min(255,b+120)})`,
+        t1:`rgb(${Math.floor(r*0.5)+70},${Math.floor(g*0.5)+70},${Math.floor(b*0.5)+70})`,
+        t2:`rgb(${Math.floor(r*0.4)+50},${Math.floor(g*0.4)+50},${Math.floor(b*0.4)+50})`,
+        // 渐变
+        gradient:`linear-gradient(135deg, rgba(${r},${g},${b},.05) 0%, rgba(${r},${g},${b},.02) 100%)`
       }
+      
       const s=document.documentElement.style
+      // 原有变量
       s.setProperty('--ac',customP.ac)
       s.setProperty('--ac-dim',customP.dim)
       s.setProperty('--ac-bd',customP.bd)
+      s.setProperty('--glow-1',customP.glow1)
+      s.setProperty('--glow-2',customP.glow2)
+      // 新增变量
+      s.setProperty('--bg-1',customP.bg1)
+      s.setProperty('--bg-2',customP.bg2)
+      s.setProperty('--bg-3',customP.bg3)
+      s.setProperty('--b0',customP.b0)
+      s.setProperty('--b1',customP.b1)
+      s.setProperty('--t0',customP.t0)
+      s.setProperty('--t1',customP.t1)
+      s.setProperty('--t2',customP.t2)
+      s.setProperty('--gradient',customP.gradient)
       const themeBtn=document.getElementById('themeBtn')
       if(themeBtn)themeBtn.textContent='custom'
       ctx.setStatus('配色已更新',false)
@@ -157,24 +420,92 @@ function bindSettingsEvents(ctx){
         // 某些设置需要立即生效
         if(id==='topmost'){
           window.electronAPI?.setAlwaysOnTop?.(isOn)
+        }else if(id==='hwaccel'){
+          window.electronAPI?.setHardwareAcceleration?.(isOn)
+        }else if(id==='autoStart'){
+          window.electronAPI?.setAutoStart?.(isOn)
+        }else if(id==='blur'){
+          document.body.classList.toggle('blur',isOn)
         }
       }catch{}
     })
   })
+
+  // 选择型设置项逻辑
+  const selectIds=['uiScale','sidebarDefault','defaultGrade','defaultSort','perPageCount','videoQuality','imageViewerZoom','proxyMode','requestTimeout','concurrentLimit']
+  selectIds.forEach(id=>{
+    const el=document.getElementById(id)
+    if(el){
+      el.addEventListener('change',(e)=>{
+        try{
+          const saved=JSON.parse(localStorage.getItem('iwara_settings')||'{}')
+          saved[id]=e.target.value
+          localStorage.setItem('iwara_settings',JSON.stringify(saved))
+          
+          // 某些设置需要立即生效
+          if(id==='uiScale'){
+            const scale=parseFloat(e.target.value)/100
+            window.electronAPI?.setZoomFactor?.(scale)
+          }else if(id==='proxyMode'){
+            const proxyConfig=document.querySelector('.proxy-config')
+            if(proxyConfig)proxyConfig.style.display=e.target.value==='手动配置'?'':'none'
+          }
+        }catch{}
+      })
+    }
+  })
+
+  // 代理地址输入
+  const proxyAddressEl=document.getElementById('proxyAddress')
+  if(proxyAddressEl){
+    proxyAddressEl.addEventListener('change',(e)=>{
+      try{
+        const saved=JSON.parse(localStorage.getItem('iwara_settings')||'{}')
+        saved.proxyAddress=e.target.value
+        localStorage.setItem('iwara_settings',JSON.stringify(saved))
+      }catch{}
+    })
+  }
 
   // 配色切换
   content.querySelectorAll('.palette-item[data-palette]').forEach(el=>{
     el.addEventListener('click',()=>{
       const key=el.getAttribute('data-palette')
       applyPalette(key)
-      renderSettingsPage(ctx) // 刷新 UI 显示 active 状态
+      renderSettingsPage(ctx)
     })
   })
 
   // 自定义配色按钮
   document.getElementById('customColorBtn')?.addEventListener('click',()=>openCustomColorPicker(ctx))
 
-  // 代理测试逻辑 (占位)
+  // 清除缓存按钮
+  document.getElementById('clearCacheBtn')?.addEventListener('click',async()=>{
+    try{
+      await window.electronAPI?.clearCache?.()
+      setStatus('缓存已清除',false)
+    }catch(e){
+      setStatus('清除缓存失败',false)
+    }
+  })
+
+  // 下载路径选择
+  document.getElementById('downloadPathBtn')?.addEventListener('click',async()=>{
+    try{
+      const path=await window.electronAPI?.selectDownloadPath?.()
+      if(path){
+        const saved=JSON.parse(localStorage.getItem('iwara_settings')||'{}')
+        saved.downloadPath=path
+        localStorage.setItem('iwara_settings',JSON.stringify(saved))
+        renderSettingsPage(ctx)
+      }
+    }catch{}
+  })
+
+  // 快捷键配置
+  document.getElementById('shortcutConfigBtn')?.addEventListener('click',()=>openShortcutConfig(ctx))
+
+  // 代理测试逻辑
   const testBtn=document.getElementById('proxyTestBtn')
   if(testBtn){
     testBtn.addEventListener('click',async()=>{

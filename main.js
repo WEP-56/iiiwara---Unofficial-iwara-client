@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session, net: electronNet } = require("electron");
+const { app, BrowserWindow, ipcMain, session, net: electronNet, dialog } = require("electron");
 let autoUpdater = null;
 const path = require("path");
 const fs = require("fs");
@@ -31,6 +31,10 @@ let cfGatePromise = null;
 
 function tokensFilePath() {
   return path.join(app.getPath("userData"), "tokens.json");
+}
+
+function credentialsFilePath() {
+  return path.join(app.getPath("userData"), "credentials.json");
 }
 
 function safeJsonParse(text) {
@@ -92,6 +96,9 @@ function loadTokensFromDisk() {
     tokenState.accessExpireAtMs = tokenState.accessToken ? tokenExpireAtMs(tokenState.accessToken) : null;
     if (tokenState.accessToken && tokenType(tokenState.accessToken) !== "access_token") tokenState.accessToken = null;
     if (tokenState.authToken && tokenType(tokenState.authToken) !== "refresh_token") tokenState.authToken = null;
+    // 同步 apiToken 变量
+    apiToken = tokenState.accessToken || null;
+    console.log("[Token] Loaded from disk, hasAccess:", !!tokenState.accessToken, "hasRefresh:", !!tokenState.authToken);
   } catch (e) {
     console.error("[Token] load failed:", e);
   }
@@ -106,6 +113,7 @@ function saveTokensToDisk() {
       2,
     );
     fs.writeFileSync(p, payload, "utf8");
+    console.log("[Token] Saved to disk, hasAccess:", !!tokenState.accessToken, "hasRefresh:", !!tokenState.authToken, "path:", p);
   } catch (e) {
     console.error("[Token] save failed:", e);
   }
@@ -134,6 +142,77 @@ function clearTokens() {
   saveTokensToDisk();
 }
 
+// 简单的加密/解密函数（使用 XOR 加密，防止明文存储）
+function encrypt(text, key) {
+  let result = '';
+  for (let i = 0; i < text.length; i++) {
+    result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+  }
+  return Buffer.from(result).toString('base64');
+}
+
+function decrypt(encrypted, key) {
+  const text = Buffer.from(encrypted, 'base64').toString();
+  let result = '';
+  for (let i = 0; i < text.length; i++) {
+    result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+  }
+  return result;
+}
+
+function saveCredentials(email, password) {
+  try {
+    const p = credentialsFilePath();
+    const key = 'iwara-electron-client'; // 固定密钥
+    const payload = JSON.stringify({
+      email: email,
+      password: encrypt(password, key),
+      savedAt: Date.now()
+    }, null, 2);
+    fs.writeFileSync(p, payload, "utf8");
+    console.log("[Credentials] Saved for email:", email);
+    return { success: true };
+  } catch (e) {
+    console.error("[Credentials] save failed:", e);
+    return { success: false, error: String(e) };
+  }
+}
+
+function loadCredentials() {
+  try {
+    const p = credentialsFilePath();
+    if (!fs.existsSync(p)) return null;
+
+    const raw = fs.readFileSync(p, "utf8");
+    const data = safeJsonParse(raw);
+
+    if (!data || !data.email || !data.password) {
+      return null;
+    }
+
+    const key = 'iwara-electron-client';
+    const decryptedPassword = decrypt(data.password, key);
+
+    console.log("[Credentials] Loaded for email:", data.email);
+    return { email: data.email, password: decryptedPassword };
+  } catch (e) {
+    console.error("[Credentials] load failed:", e);
+    return null;
+  }
+}
+
+function clearCredentials() {
+  try {
+    const p = credentialsFilePath();
+    if (fs.existsSync(p)) {
+      fs.unlinkSync(p);
+      console.log("[Credentials] Cleared");
+    }
+  } catch (e) {
+    console.error("[Credentials] clear failed:", e);
+  }
+}
+
 // 简单的端口检测函数
 function checkPort(port) {
   return new Promise((resolve) => {
@@ -154,14 +233,25 @@ async function detectProxy() {
     console.log(`[Proxy] Detected from env: ${globalProxy}`);
     return globalProxy;
   }
-  
+
   // 2. 检查常见端口
+  const oldProxy = globalProxy;
   if (await checkPort(7890)) {
     globalProxy = 'http://127.0.0.1:7890'; // Clash
   } else if (await checkPort(10809)) {
     globalProxy = 'http://127.0.0.1:10809'; // v2rayN
+  } else {
+    globalProxy = null;
   }
-  
+
+  // 如果代理发生变化，更新 session
+  if (globalProxy !== oldProxy) {
+    if (iwaraSession) {
+      iwaraSession.setProxy(globalProxy ? { proxyRules: globalProxy } : { mode: 'direct' });
+      console.log(`[Proxy] Session proxy updated to: ${globalProxy || 'direct'}`);
+    }
+  }
+
   if (globalProxy) {
     console.log(`[Proxy] Auto-detected local proxy: ${globalProxy}`);
   } else {
@@ -194,7 +284,6 @@ function requestJson({ url, method = "GET", headers = {}, body, useAuth = true, 
 
     const mergedHeaders = {
       Accept: "application/json, text/plain, */*",
-      "Content-Type": "application/json",
       "x-site": IWARA_SITE_HOST,
       Origin: IWARA_BASE_URL,
       Referer: `${IWARA_BASE_URL}/`,
@@ -202,6 +291,11 @@ function requestJson({ url, method = "GET", headers = {}, body, useAuth = true, 
       "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
       ...headers,
     };
+
+    // 只有当有 body 时才添加 Content-Type
+    if (body !== undefined && body !== null) {
+      mergedHeaders["Content-Type"] = "application/json";
+    }
 
     if (useAuth && tokenState.accessToken) {
       mergedHeaders.Authorization = `Bearer ${tokenState.accessToken}`;
@@ -226,7 +320,7 @@ function requestJson({ url, method = "GET", headers = {}, body, useAuth = true, 
     request.on("error", (err) => {
       finish({ status: 0, json: null, text: String(err && err.message ? err.message : err), headers: {} });
     });
-    if (body !== undefined) request.write(typeof body === "string" ? body : JSON.stringify(body));
+    if (body !== undefined && body !== null) request.write(typeof body === "string" ? body : JSON.stringify(body));
     request.end();
   });
 }
@@ -438,9 +532,10 @@ function createWindow() {
     console.log("[renderer] did-fail-load", { errorCode, errorDescription, validatedURL, isMainFrame });
   });
 
-  if (!app.isPackaged) {
-    mainWindow.webContents.openDevTools();
-  }
+  // 开发模式下不自动打开 DevTools
+  // if (!app.isPackaged) {
+  //   mainWindow.webContents.openDevTools();
+  // }
 
   mainWindow.on("closed", () => {
     mainWindow = null;
@@ -600,8 +695,11 @@ function initIwaraSession() {
 }
 
 app.whenReady().then(async () => {
-  await detectProxy(); 
-  
+  console.log('[App] userData path:', app.getPath('userData'));
+
+  // 延迟检测代理，给代理软件启动时间
+  setTimeout(() => detectProxy().catch(() => {}), 2000);
+
   initIwaraSession();
   loadTokensFromDisk();
   if (tokenState.accessToken && isTokenExpired(tokenState.accessToken, 5 * 60) && tokenState.authToken && !isTokenExpired(tokenState.authToken)) {
@@ -760,6 +858,8 @@ ipcMain.handle("auth-login", async (event, { email, password }) => {
       if (refreshToken) setAuthToken(refreshToken);
       if (accessToken) {
         setAccessToken(accessToken);
+        // 保存账号密码用于自动登录
+        saveCredentials(email, password);
         return { success: true, accessToken };
       }
     }
@@ -778,6 +878,7 @@ ipcMain.handle("auth-login", async (event, { email, password }) => {
 
 ipcMain.handle("auth-logout", async () => {
   clearTokens();
+  clearCredentials();
   return { success: true };
 });
 
@@ -785,6 +886,77 @@ ipcMain.handle("auth-status", async () => {
   const hasRefresh = !!tokenState.authToken && !isTokenExpired(tokenState.authToken);
   const hasAccess = !!tokenState.accessToken && !isTokenExpired(tokenState.accessToken, 5 * 60);
   return { hasRefresh, hasAccess, isRefreshing: !!tokenState.refreshing };
+});
+
+ipcMain.handle("auth-get-saved-credentials", async () => {
+  const creds = loadCredentials();
+  return creds ? { success: true, email: creds.email } : { success: false };
+});
+
+ipcMain.handle("auth-auto-login", async () => {
+  const creds = loadCredentials();
+  if (!creds) {
+    return { success: false, message: "No saved credentials" };
+  }
+
+  console.log("[Auth] Auto-login with:", creds.email);
+
+  const loginUrl = new URL("/user/login", API_BASE_URL).toString();
+  const doLogin = async () => {
+    const raw = await requestJson({
+      url: loginUrl,
+      method: "POST",
+      body: { email: creds.email, password: creds.password },
+      headers: {},
+      useAuth: false,
+    });
+    if (raw.status === 403 && isCloudflareChallenge(raw)) {
+      await ensureCloudflareGate();
+      const retry = await requestJson({
+        url: loginUrl,
+        method: "POST",
+        body: { email: creds.email, password: creds.password },
+        headers: {},
+        useAuth: false,
+      });
+      return retry;
+    }
+    return raw;
+  };
+
+  const raw = await doLogin();
+  const json = raw && raw.json && typeof raw.json === "object" ? raw.json : null;
+
+  if (raw.status >= 200 && raw.status < 300 && json) {
+    const accessToken =
+      typeof json.accessToken === "string"
+        ? json.accessToken
+        : typeof json.token === "string"
+          ? json.token
+          : null;
+    const refreshToken =
+      typeof json.authToken === "string"
+        ? json.authToken
+        : typeof json.refreshToken === "string"
+          ? json.refreshToken
+          : typeof json.refresh_token === "string"
+            ? json.refresh_token
+            : null;
+
+    if (refreshToken) setAuthToken(refreshToken);
+    if (accessToken) {
+      setAccessToken(accessToken);
+      console.log("[Auth] Auto-login success");
+      return { success: true, accessToken };
+    }
+  }
+
+  const msg =
+    (json && typeof json.message === "string" ? json.message : null) ||
+    String(raw && raw.text ? raw.text : "") ||
+    `Auto-login failed (${raw && raw.status ? raw.status : 0})`;
+  console.error("[Auth] Auto-login failed:", msg);
+  return { error: true, message: msg };
 });
 
 // 历史记录 IPC 处理
@@ -806,4 +978,59 @@ ipcMain.handle("history-clear", async (event, params) => {
 
 ipcMain.handle("history-stats", async () => {
   return history.getHistoryStats();
+});
+
+// 窗口设置
+ipcMain.on("set-always-on-top", (event, isOn) => {
+  if (mainWindow) {
+    mainWindow.setAlwaysOnTop(!!isOn);
+  }
+});
+
+ipcMain.on("set-hardware-acceleration", (event, isOn) => {
+  // 硬件加速需要在应用启动前设置，这里只保存配置
+  try {
+    const settingsPath = path.join(app.getPath("userData"), "settings.json");
+    const data = { hwaccel: !!isOn };
+    fs.writeFileSync(settingsPath, JSON.stringify(data), "utf8");
+  } catch {}
+});
+
+ipcMain.handle("set-auto-start", async (event, isOn) => {
+  try {
+    app.setLoginItemSettings({ openAtLogin: !!isOn });
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: String(e && e.message ? e.message : e) };
+  }
+});
+
+// 清除缓存
+ipcMain.handle("clear-cache", async () => {
+  try {
+    if (iwaraSession) {
+      await iwaraSession.clearCache();
+      await iwaraSession.clearStorageData({ storages: ["cookies", "localstorage", "indexdb"] });
+    }
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: String(e && e.message ? e.message : e) };
+  }
+});
+
+// 选择下载路径
+ipcMain.handle("select-download-path", async () => {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: "选择下载保存路径",
+      properties: ["openDirectory", "createDirectory"],
+    });
+    if (!result.canceled && result.filePaths && result.filePaths[0]) {
+      return result.filePaths[0];
+    }
+    return null;
+  } catch (e) {
+    console.error("[select-download-path]", e);
+    return null;
+  }
 });

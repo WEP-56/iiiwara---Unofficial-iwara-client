@@ -161,7 +161,7 @@ async function toggleUserFollow(ctx){
   }
   try{
     const ep=endpoints.userFollowOrUnfollow(userId)
-    const res=nextFollowing?await apiPost(ep,null,null,{skipAuthWait:true,silent:true}):await apiDelete(ep,null,{skipAuthWait:true,silent:true})
+    const res=nextFollowing?await apiPost(ep,undefined,undefined,{skipAuthWait:true,silent:true}):await apiDelete(ep,undefined,{skipAuthWait:true,silent:true})
     if(res?.error)throw new Error(res.message||'request failed')
     setStatus(nextFollowing?'followed':'unfollowed',false)
   }catch(e){

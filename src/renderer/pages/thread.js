@@ -174,7 +174,7 @@ async function loadThreadView(ctx){
     // 添加到历史记录
     try{
       const { addThreadHistory }=await import('../core/history.js')
-      await addThreadHistory(thread)
+      await addThreadHistory(thread, state.view.catId)
     }catch(e){/* ignore history errors */}
     const mapped=posts.map(forumPostToCommentLike)
     state.view.thread.posts=mapped

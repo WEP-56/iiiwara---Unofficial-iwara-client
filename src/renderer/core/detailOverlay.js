@@ -26,6 +26,12 @@ export function openDetailShell(title){
   if(left)left.innerHTML=''
   if(center)center.innerHTML=`<div class="detail-loading">加载中…</div>`
   if(right)right.innerHTML=''
+  // 重新绑定关闭按钮事件
+  const closeBtn=document.getElementById('detailCloseBtn')
+  if(closeBtn){
+    closeBtn.onclick=null
+    closeBtn.onclick=()=>closeDetail()
+  }
 }
 
 export function closeDetail(){
@@ -58,6 +64,12 @@ export function setDetailTitle(title){
 export function setDetailBodyHtml(html){
   const center=document.getElementById('detailCenter')
   if(center)center.innerHTML=html||''
+  // 重新绑定关闭按钮事件，确保动态内容加载后关闭按钮仍然有效
+  const closeBtn=document.getElementById('detailCloseBtn')
+  if(closeBtn){
+    closeBtn.onclick=null
+    closeBtn.onclick=()=>closeDetail()
+  }
 }
 
 export function setDetailLeftHtml(html){

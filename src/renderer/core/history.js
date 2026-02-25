@@ -114,7 +114,7 @@ export async function addImageHistory(image) {
 /**
  * 便捷函数: 添加帖子浏览记录
  */
-export async function addThreadHistory(thread) {
+export async function addThreadHistory(thread, categoryId) {
   if (!thread?.id) return { success: false };
   return addHistory({
     type: 'thread',
@@ -124,7 +124,8 @@ export async function addThreadHistory(thread) {
     author: thread.user?.name || '',
     authorId: thread.user?.id || '',
     rating: 'general',
-    replyCount: thread.numReplies || thread.replies?.length || 0
+    replyCount: thread.numReplies || thread.replies?.length || 0,
+    categoryId: categoryId || thread.categoryId || thread.forumId || ''
   });
 }
 

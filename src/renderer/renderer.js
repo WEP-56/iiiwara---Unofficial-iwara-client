@@ -19,10 +19,82 @@ window.addEventListener('unhandledrejection',(e)=>{try{console.error('unhandledr
 function ratingClass(r){if(r==='adult')return'r';if(r==='ecchi')return'e';return'g'}
 function ratingLabel(r){if(r==='adult')return'18+';if(r==='ecchi')return'E';return'G'}
 const PALETTES=[
-  {key:'blue',label:'blue',ac:'#67b7ff',dim:'rgba(103,183,255,.11)',bd:'rgba(103,183,255,.26)',glow1:'rgba(103,183,255,.14)',glow2:'rgba(122,92,255,.10)'},
-  {key:'purple',label:'purple',ac:'#b48cff',dim:'rgba(180,140,255,.12)',bd:'rgba(180,140,255,.28)',glow1:'rgba(180,140,255,.14)',glow2:'rgba(103,183,255,.08)'},
-  {key:'green',label:'green',ac:'#38d399',dim:'rgba(56,211,153,.10)',bd:'rgba(56,211,153,.25)',glow1:'rgba(56,211,153,.12)',glow2:'rgba(56,211,153,.05)'},
-  {key:'pink',label:'pink',ac:'#ff5ea8',dim:'rgba(255,94,168,.10)',bd:'rgba(255,94,168,.25)',glow1:'rgba(255,94,168,.12)',glow2:'rgba(122,92,255,.08)'}
+  {
+    key:'blue',
+    label:'blue',
+    ac:'#67b7ff',
+    dim:'rgba(103,183,255,.11)',
+    bd:'rgba(103,183,255,.26)',
+    glow1:'rgba(103,183,255,.14)',
+    glow2:'rgba(122,92,255,.10)',
+    // 新增：背景色调
+    bg1:'#0d1117',
+    bg2:'#161b22',
+    bg3:'#21262d',
+    // 新增：边框/分割线
+    b0:'rgba(103,183,255,.08)',
+    b1:'rgba(103,183,255,.15)',
+    // 新增：文字颜色
+    t0:'#e6edf3',
+    t1:'#8b949e',
+    t2:'#6e7681',
+    // 新增：渐变背景
+    gradient:'linear-gradient(135deg, rgba(103,183,255,.05) 0%, rgba(122,92,255,.03) 100%)'
+  },
+  {
+    key:'purple',
+    label:'purple',
+    ac:'#b48cff',
+    dim:'rgba(180,140,255,.12)',
+    bd:'rgba(180,140,255,.28)',
+    glow1:'rgba(180,140,255,.14)',
+    glow2:'rgba(103,183,255,.08)',
+    bg1:'#0f0d14',
+    bg2:'#18151f',
+    bg3:'#231e2d',
+    b0:'rgba(180,140,255,.08)',
+    b1:'rgba(180,140,255,.15)',
+    t0:'#e8e4f0',
+    t1:'#9588a8',
+    t2:'#6e6580',
+    gradient:'linear-gradient(135deg, rgba(180,140,255,.05) 0%, rgba(103,183,255,.03) 100%)'
+  },
+  {
+    key:'green',
+    label:'green',
+    ac:'#38d399',
+    dim:'rgba(56,211,153,.10)',
+    bd:'rgba(56,211,153,.25)',
+    glow1:'rgba(56,211,153,.12)',
+    glow2:'rgba(56,211,153,.05)',
+    bg1:'#0a1210',
+    bg2:'#111a17',
+    bg3:'#192420',
+    b0:'rgba(56,211,153,.08)',
+    b1:'rgba(56,211,153,.15)',
+    t0:'#e4f0ea',
+    t1:'#88a898',
+    t2:'#5a7a6a',
+    gradient:'linear-gradient(135deg, rgba(56,211,153,.05) 0%, rgba(56,211,153,.02) 100%)'
+  },
+  {
+    key:'pink',
+    label:'pink',
+    ac:'#ff5ea8',
+    dim:'rgba(255,94,168,.10)',
+    bd:'rgba(255,94,168,.25)',
+    glow1:'rgba(255,94,168,.12)',
+    glow2:'rgba(122,92,255,.08)',
+    bg1:'#140d10',
+    bg2:'#1e1318',
+    bg3:'#2a1a22',
+    b0:'rgba(255,94,168,.08)',
+    b1:'rgba(255,94,168,.15)',
+    t0:'#f0e4e8',
+    t1:'#a88898',
+    t2:'#7a5a6a',
+    gradient:'linear-gradient(135deg, rgba(255,94,168,.05) 0%, rgba(122,92,255,.03) 100%)'
+  }
 ]
 function applyPalette(paletteKey){
   const p=PALETTES.find((x)=>x.key===paletteKey)||PALETTES[0]
@@ -30,11 +102,26 @@ function applyPalette(paletteKey){
   state.palette=p.key
   document.documentElement.setAttribute('data-theme','dark')
   const s=document.documentElement.style
+  // 原有变量
   s.setProperty('--ac',p.ac)
   s.setProperty('--ac-dim',p.dim)
   s.setProperty('--ac-bd',p.bd)
   s.setProperty('--glow-1',p.glow1)
   s.setProperty('--glow-2',p.glow2)
+  // 新增：背景色
+  s.setProperty('--bg-1',p.bg1)
+  s.setProperty('--bg-2',p.bg2)
+  s.setProperty('--bg-3',p.bg3)
+  // 新增：边框色
+  s.setProperty('--b0',p.b0)
+  s.setProperty('--b1',p.b1)
+  // 新增：文字色
+  s.setProperty('--t0',p.t0)
+  s.setProperty('--t1',p.t1)
+  s.setProperty('--t2',p.t2)
+  // 新增：渐变
+  s.setProperty('--gradient',p.gradient)
+  
   const btn=document.getElementById('themeBtn')
   if(btn){
     btn.textContent=p.label
@@ -51,19 +138,161 @@ function saveSetting(key,val){
   }catch{}
 }
 
+// 默认快捷键配置
+const DEFAULT_SHORTCUTS={
+  'playPause':'Space',
+  'prevVideo':'ArrowLeft',
+  'nextVideo':'ArrowRight',
+  'volumeUp':'ArrowUp',
+  'volumeDown':'ArrowDown',
+  'mute':'KeyM',
+  'fullscreen':'KeyF',
+  'escape':'Escape',
+  'search':'Ctrl+KeyK',
+  'home':'Ctrl+KeyH',
+  'history':'Ctrl+KeyY',
+  'settings':'Ctrl+Comma',
+  'back':'Alt+ArrowLeft',
+  'forward':'Alt+ArrowRight'
+}
+
+function initGlobalShortcuts(){
+  const saved=JSON.parse(localStorage.getItem('iwara_shortcuts')||'{}')
+  const shortcuts={...DEFAULT_SHORTCUTS,...saved}
+
+  document.addEventListener('keydown',(e)=>{
+    // 忽略在输入框中的按键
+    const tag=e.target.tagName.toLowerCase()
+    if(['input','textarea','select'].includes(tag))return
+    if(e.target.isContentEditable)return
+
+    // 构建当前按键组合
+    const parts=[]
+    if(e.ctrlKey)parts.push('Ctrl')
+    if(e.altKey)parts.push('Alt')
+    if(e.shiftKey)parts.push('Shift')
+    if(e.metaKey)parts.push('Meta')
+    parts.push(e.code)
+    const currentKey=parts.join('+')
+
+    // 查找匹配的快捷键
+    const action=Object.entries(shortcuts).find(([id,key])=>key===currentKey)?.[0]
+    if(!action)return
+
+    e.preventDefault()
+    e.stopPropagation()
+
+    // 执行对应操作
+    executeShortcutAction(action)
+  },true)
+}
+
+function executeShortcutAction(action){
+  switch(action){
+    case 'playPause':
+      // 播放/暂停视频
+      const video=document.querySelector('video')
+      if(video){
+        if(video.paused)video.play()
+        else video.pause()
+      }
+      break
+    case 'prevVideo':
+    case 'nextVideo':
+      // 上一个/下一个视频
+      const navBtn=document.querySelector(action==='prevVideo'?'.video-nav-prev':'.video-nav-next')
+      navBtn?.click()
+      break
+    case 'volumeUp':
+    case 'volumeDown':
+      // 音量调整
+      const v=document.querySelector('video')
+      if(v){
+        const delta=action==='volumeUp'?0.1:-0.1
+        v.volume=Math.max(0,Math.min(1,v.volume+delta))
+      }
+      break
+    case 'mute':
+      // 静音切换
+      const vid=document.querySelector('video')
+      if(vid)vid.muted=!vid.muted
+      break
+    case 'fullscreen':
+      // 全屏切换
+      const fsBtn=document.querySelector('.fullscreen-btn')
+      fsBtn?.click()
+      break
+    case 'escape':
+      // 退出/返回
+      closeDetail()
+      break
+    case 'search':
+      // 打开搜索
+      const searchInput=document.getElementById('searchInput')
+      searchInput?.focus()
+      break
+    case 'home':
+      // 首页
+      state.page='home'
+      document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'))
+      document.querySelector('.sb-item[data-page="home"]')?.classList.add('active')
+      renderPageInitial()
+      break
+    case 'history':
+      // 历史记录
+      state.page='history'
+      document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'))
+      document.querySelector('.sb-item[data-page="history"]')?.classList.add('active')
+      renderPageInitial()
+      break
+    case 'settings':
+      // 设置
+      state.page='settings'
+      document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'))
+      document.querySelector('.sb-item[data-page="settings"]')?.classList.add('active')
+      renderPageInitial()
+      break
+    case 'back':
+      // 后退
+      window.history.back()
+      break
+    case 'forward':
+      // 前进
+      window.history.forward()
+      break
+  }
+}
+
 function loadSettings(){
   try{
     const settings=JSON.parse(localStorage.getItem('iwara_settings')||'{}')
-    
+    console.log('[Settings] Loaded settings:', Object.keys(settings))
+
     // 加载配色
     if(settings.palette==='custom'&&settings.paletteCustom){
       state.palette='custom'
       state.paletteCustom=settings.paletteCustom
       const hex=settings.paletteCustom
+      const r=parseInt(hex.slice(1,3),16)
+      const g=parseInt(hex.slice(3,5),16)
+      const b=parseInt(hex.slice(5,7),16)
       const s=document.documentElement.style
+      // 原有变量
       s.setProperty('--ac',hex)
-      s.setProperty('--ac-dim',hex+'1c')
-      s.setProperty('--ac-bd',hex+'42')
+      s.setProperty('--ac-dim',`rgba(${r},${g},${b},.11)`)
+      s.setProperty('--ac-bd',`rgba(${r},${g},${b},.26)`)
+      s.setProperty('--glow-1',`rgba(${r},${g},${b},.14)`)
+      s.setProperty('--glow-2',`rgba(${r},${g},${b},.10)`)
+      // 新增变量
+      s.setProperty('--bg-1',`rgb(${Math.floor(r*0.05)},${Math.floor(g*0.05)},${Math.floor(b*0.08)})`)
+      s.setProperty('--bg-2',`rgb(${Math.floor(r*0.08)},${Math.floor(g*0.08)},${Math.floor(b*0.12)})`)
+      s.setProperty('--bg-3',`rgb(${Math.floor(r*0.12)},${Math.floor(g*0.12)},${Math.floor(b*0.18)})`)
+      s.setProperty('--b0',`rgba(${r},${g},${b},.08)`)
+      s.setProperty('--b1',`rgba(${r},${g},${b},.15)`)
+      s.setProperty('--t0',`rgb(${Math.min(255,r+120)},${Math.min(255,g+120)},${Math.min(255,b+120)})`)
+      s.setProperty('--t1',`rgb(${Math.floor(r*0.5)+70},${Math.floor(g*0.5)+70},${Math.floor(b*0.5)+70})`)
+      s.setProperty('--t2',`rgb(${Math.floor(r*0.4)+50},${Math.floor(g*0.4)+50},${Math.floor(b*0.4)+50})`)
+      s.setProperty('--gradient',`linear-gradient(135deg, rgba(${r},${g},${b},.05) 0%, rgba(${r},${g},${b},.02) 100%)`)
     }else if(settings.palette){
       applyPalette(settings.palette)
     }
@@ -74,6 +303,13 @@ function loadSettings(){
       if(app)app.classList.add('immersive')
     }
     if(settings.rating)state.rating={...state.rating,...settings.rating}
+    
+    // 加载界面缩放
+    if(settings.uiScale){
+      const scale=parseFloat(settings.uiScale)/100
+      window.electronAPI?.setZoomFactor?.(scale)
+    }
+    
     // 更多设置可以在此加载
   }catch{}
 }
@@ -346,7 +582,11 @@ function accountPageCtx(){
     meUsername,
     meAvatarUrl,
     meAvatarLetter,
-    mapLoginError
+    mapLoginError,
+    openVideoDetail,
+    openImageDetail,
+    openUserDetail,
+    openForumThreadDetail
   }
 }
 
@@ -531,7 +771,7 @@ function renderCreatePage(){
   if(tab==='我的投稿'){
     return pageContainerHtml(`<div class="create-page" style="padding:18px 0"><div class="create-title">我的投稿</div><div class="create-sub" style="margin-top:6px">仅显示最新 20 条</div><button class="create-btn" id="createMyPostsReload" style="margin-top:10px;background:rgba(255,255,255,.08);border:1px solid var(--b0);color:var(--t1)">刷新</button><div id="myPostsList" style="margin-top:12px"><div class="detail-loading">加载中…</div></div></div>`)
   }
-  return pageContainerHtml(`<div class="create-page" style="padding:18px 0"><div class="create-title">投稿</div><div class="create-sub" style="margin-top:6px">发布一条帖子到 iwara</div><div class="search-box" style="margin-top:12px"><span class="sico">T</span><input id="createPostTitle" placeholder="标题"></div><div class="search-box" style="margin-top:10px"><span class="sico">✎</span><textarea id="createPostBody" placeholder="内容" style="height:160px;resize:vertical"></textarea></div><div id="createPostErr" style="margin-top:10px;font-size:12px;color:#f87171;min-height:16px"></div><button class="create-btn" id="createPostBtn" style="margin-top:6px">发布投稿</button></div>`)
+  return pageContainerHtml(`<div class="create-page" style="padding:18px 0"><div class="create-title">投稿</div><div class="create-sub" style="margin-top:6px">发布一条帖子到 iwara</div><div class="search-box" style="margin-top:12px"><span class="sico">T</span><input id="createPostTitle" placeholder="标题"></div><div class="create-textarea-box" style="margin-top:10px"><textarea id="createPostBody" placeholder="内容" style="width:100%;min-height:160px;padding:12px;background:var(--bg-2);border:1px solid var(--b1);border-radius:var(--r-sm);color:var(--t0);font-size:13px;line-height:1.6;resize:vertical;outline:none"></textarea></div><div id="createPostErr" style="margin-top:10px;font-size:12px;color:#f87171;min-height:16px"></div><button class="create-btn" id="createPostBtn" style="margin-top:6px">发布投稿</button></div>`)
 }
 async function ensureMeLoaded(){if(!state.auth.hasAccess)return null;if(state.me)return state.me;const data=await apiGet(endpoints.me(),null,{skipAuthWait:true});if(data?.error)throw new Error(data.message||'request failed');const u=pickUser(data);state.me=u;updateAccountUi();return state.me}
 function meName(){return state.me?.name||state.me?.username||'User'}
@@ -748,6 +988,8 @@ function bindForumEvents(){
   })
 }
 
+let authRetryCount = 0;
+
 async function syncAuthState(){
   try{
     const st=await window.electronAPI.authStatus()
@@ -757,6 +999,16 @@ async function syncAuthState(){
     if(!state.auth.hasAccess){
       state.me=null
       state.meCounts=null
+      // 如果有 refresh token 但没有 access token，并且重试次数少于 3 次，延迟重试
+      if(state.auth.hasRefresh && authRetryCount < 3){
+        authRetryCount++
+        console.log(`[Auth] Retry syncAuthState (${authRetryCount}/3) after 3s...`)
+        setTimeout(syncAuthState, 3000)
+        return
+      }
+    } else {
+      // 成功获取到 access token，重置重试计数
+      authRetryCount = 0
     }
     updateAccountUi()
   }catch{}
@@ -1009,7 +1261,24 @@ document.addEventListener('DOMContentLoaded',async()=>{
 
   await syncAuthState()
 
+  // 如果没有有效的 access token，尝试自动登录
+  if(!state.auth.hasAccess){
+    const savedCreds=await window.electronAPI?.authGetSavedCredentials?.()
+    if(savedCreds?.success&&savedCreds?.email){
+      console.log('[Auth] Found saved credentials, attempting auto-login...')
+      const autoLoginResult=await window.electronAPI?.authAutoLogin?.()
+      if(autoLoginResult?.success){
+        await syncAuthState()
+      }else{
+        console.log('[Auth] Auto-login failed:',autoLoginResult?.message)
+      }
+    }
+  }
+
   loadSettings()
+
+  // 初始化全局快捷键监听
+  initGlobalShortcuts()
 
   const acc=document.getElementById('accountBtn')
   if(acc){

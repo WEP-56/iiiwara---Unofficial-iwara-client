@@ -17,8 +17,10 @@ function getHistoryFilePath() {
 function ensureDataDir() {
   const dataDir = path.join(app.getPath('userData'), 'data');
   if (!fs.existsSync(dataDir)) {
+    console.log('[History] Creating data directory:', dataDir);
     fs.mkdirSync(dataDir, { recursive: true });
   }
+  return dataDir;
 }
 
 function safeJsonParse(text) {
@@ -31,34 +33,37 @@ function safeJsonParse(text) {
 
 function loadHistory() {
   if (historyData) return historyData;
-  
+
   try {
     ensureDataDir();
     const filePath = getHistoryFilePath();
     if (!fs.existsSync(filePath)) {
+      console.log('[History] No history file found, creating new');
       historyData = { version: HISTORY_VERSION, items: [] };
       return historyData;
     }
-    
+
     const raw = fs.readFileSync(filePath, 'utf8');
     const data = safeJsonParse(raw);
-    
+
     if (!data || !Array.isArray(data.items)) {
+      console.log('[History] Invalid history data, creating new');
       historyData = { version: HISTORY_VERSION, items: [] };
       return historyData;
     }
-    
+
     historyData = {
       version: data.version || HISTORY_VERSION,
       items: data.items.filter(item => item && item.id && item.type && item.contentId)
     };
-    
+
     // Build index
     historyMap.clear();
     for (const item of historyData.items) {
       historyMap.set(item.id, item);
     }
-    
+
+    console.log(`[History] Loaded ${historyData.items.length} items from:`, filePath);
     return historyData;
   } catch (e) {
     console.error('[History] Load failed:', e);
@@ -69,13 +74,14 @@ function loadHistory() {
 
 function saveHistoryImmediate() {
   if (!isDirty || !historyData) return;
-  
+
   try {
     ensureDataDir();
     const filePath = getHistoryFilePath();
     const payload = JSON.stringify(historyData, null, 2);
     fs.writeFileSync(filePath, payload, 'utf8');
     isDirty = false;
+    console.log(`[History] Saved ${historyData.items.length} items to:`, filePath);
   } catch (e) {
     console.error('[History] Save failed:', e);
   }

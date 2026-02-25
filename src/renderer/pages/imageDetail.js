@@ -172,7 +172,7 @@ async function toggleImageLike(ctx){
   renderImageDetailPanel(ctx)
   try{
     const ep=endpoints.likeImage(state.view.id)
-    const res=nextLiked?await apiPost(ep,null,null,{skipAuthWait:true,silent:true}):await apiDelete(ep,null,{skipAuthWait:true,silent:true})
+    const res=nextLiked?await apiPost(ep,undefined,undefined,{skipAuthWait:true,silent:true}):await apiDelete(ep,undefined,{skipAuthWait:true,silent:true})
     if(res?.error)throw new Error(res.message||'request failed')
     setStatus(nextLiked?'liked':'unliked',false)
   }catch(e){
@@ -219,10 +219,7 @@ function bindImageDetailPageEvents(ctx){
   content.addEventListener('click',async(e)=>{
     const side=e.target?.closest?.('#sideToggleBtn')
     if(side){
-      state.view.sideCollapsed=!state.view.sideCollapsed
-      const right=document.querySelector('.watch-right')
-      if(right)right.classList.toggle('collapsed',!!state.view.sideCollapsed)
-      side.textContent=state.view.sideCollapsed?'‹':'›'
+      toggleWatchSidebar(side)
       return
     }
     const tabEl=e.target?.closest?.('[data-wtab]')
