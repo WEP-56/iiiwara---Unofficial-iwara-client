@@ -98,19 +98,22 @@ async function sendDetailComment(ctx){
 }
 
 function bindDetailCommentsPanelEvents(ctx){
-  const more=document.getElementById('detailCmtMoreBtn')
-  if(more&&!more.__bound){
-    more.__bound=true
-    more.addEventListener('click',async()=>{
+  const panel=document.getElementById('detailRight')
+  if(!panel)return
+  if(panel._detailCommentsDelegated)return
+  panel._detailCommentsDelegated=true
+  panel.addEventListener('click',async(e)=>{
+    const more=e.target?.closest?.('#detailCmtMoreBtn')
+    if(more){
       await loadDetailComments(ctx,false)
       renderDetailCommentsPanel(ctx)
-    })
-  }
-  const send=document.getElementById('detailCmtSendBtn')
-  if(send&&!send.__bound){
-    send.__bound=true
-    send.addEventListener('click',()=>sendDetailComment(ctx))
-  }
+      return
+    }
+    const send=e.target?.closest?.('#detailCmtSendBtn')
+    if(send){
+      sendDetailComment(ctx)
+    }
+  })
 }
 
 function renderDetailCommentsPanel(ctx){
@@ -194,19 +197,22 @@ async function sendForumReply(ctx){
 }
 
 function bindDetailForumPanelEvents(ctx){
-  const more=document.getElementById('detailForumMoreBtn')
-  if(more&&!more.__bound){
-    more.__bound=true
-    more.addEventListener('click',async()=>{
+  const panel=document.getElementById('detailRight')
+  if(!panel)return
+  if(panel._detailForumDelegated)return
+  panel._detailForumDelegated=true
+  panel.addEventListener('click',async(e)=>{
+    const more=e.target?.closest?.('#detailForumMoreBtn')
+    if(more){
       await loadForumPosts(ctx,false)
       renderDetailForumPanel(ctx)
-    })
-  }
-  const send=document.getElementById('detailForumSendBtn')
-  if(send&&!send.__bound){
-    send.__bound=true
-    send.addEventListener('click',()=>sendForumReply(ctx))
-  }
+      return
+    }
+    const send=e.target?.closest?.('#detailForumSendBtn')
+    if(send){
+      sendForumReply(ctx)
+    }
+  })
 }
 
 function renderDetailForumPanel(ctx){
@@ -299,17 +305,21 @@ async function sendViewComment(ctx,st,prefix,onAfter){
 }
 
 export function bindViewCommentsPanelEvents(ctx,st,prefix,onRender){
-  const more=document.getElementById(`${prefix}CmtMoreBtn`)
-  if(more&&!more.__bound){
-    more.__bound=true
-    more.addEventListener('click',async()=>{
+  const panel=document.getElementById('content')
+  if(!panel)return
+  const key=`_viewComments_${prefix}_delegated`
+  if(panel[key])return
+  panel[key]=true
+  panel.addEventListener('click',async(e)=>{
+    const more=e.target?.closest?.(`#${prefix}CmtMoreBtn`)
+    if(more){
       await loadViewComments(ctx,st,false)
       if(typeof onRender==='function')onRender()
-    })
-  }
-  const send=document.getElementById(`${prefix}CmtSendBtn`)
-  if(send&&!send.__bound){
-    send.__bound=true
-    send.addEventListener('click',()=>sendViewComment(ctx,st,prefix,onRender))
-  }
+      return
+    }
+    const send=e.target?.closest?.(`#${prefix}CmtSendBtn`)
+    if(send){
+      sendViewComment(ctx,st,prefix,onRender)
+    }
+  })
 }

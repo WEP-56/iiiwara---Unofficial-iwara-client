@@ -50,63 +50,68 @@ function forumComposerHtml(ctx,cats){
 
 function bindForumComposeEntryEvents(ctx,cats){
   const { state, doLogin }=ctx
-  const btn=document.getElementById('forumNewThreadBtn')
-  if(btn&&!btn.__bound){
-    btn.__bound=true
-    btn.addEventListener('click',async()=>{
-      if(!state.auth.hasAccess){
-        await doLogin()
-        return
-      }
-      openDetailShell('发帖')
-      setDetailTitle('论坛发帖')
-      setDetailBodyHtml(forumComposerHtml(ctx,cats))
-      bindForumComposerEvents(ctx,cats)
-    })
-  }
+  const content=document.getElementById('content')
+  if(!content)return
+  if(content._forumComposeEntryDelegated)return
+  content._forumComposeEntryDelegated=true
+  content.addEventListener('click',async(e)=>{
+    const btn=e.target?.closest?.('#forumNewThreadBtn')
+    if(!btn)return
+    if(!state.auth.hasAccess){
+      await doLogin()
+      return
+    }
+    openDetailShell('发帖')
+    setDetailTitle('论坛发帖')
+    setDetailBodyHtml(forumComposerHtml(ctx,cats))
+    bindForumComposerEvents(ctx,cats)
+  })
 }
 
 function bindForumComposerEvents(ctx,cats){
   const { state, endpoints, apiPost, setStatus, openForumThreadDetail }=ctx
+  const panel=document.getElementById('detailBody')
+  if(!panel)return
+  if(panel._forumComposerDelegated)return
+  panel._forumComposerDelegated=true
+
   const errEl=document.getElementById('forumPostErr')
   const catEl=document.getElementById('forumPostCategory')
   const titleEl=document.getElementById('forumPostTitle')
   const bodyEl=document.getElementById('forumPostBody')
-  const cancel=document.getElementById('forumPostCancelBtn')
-  const send=document.getElementById('forumPostSendBtn')
   const setErr=(m)=>{if(errEl)errEl.textContent=m||''}
 
-  if(catEl&&!catEl.__bound){
-    catEl.__bound=true
-    catEl.addEventListener('change',()=>{
-      state.forum.composeCategoryId=String(catEl.value||'')
-    })
-  }
-  if(cancel&&!cancel.__bound){
-    cancel.__bound=true
-    cancel.addEventListener('click',()=>closeDetail())
-  }
-  if(send&&!send.__bound){
-    send.__bound=true
-    send.addEventListener('click',async()=>{
-      setErr('')
-      if(!state.auth.hasAccess){
-        setErr('请先登录')
-        return
-      }
-      const catId=String(catEl?.value||state.forum.composeCategoryId||'').trim()
-      const title=String(titleEl?.value||'').trim()
-      const body=String(bodyEl?.value||'').trim()
-      if(!catId){
-        setErr('请选择分类')
-        return
-      }
-      if(!title||!body){
-        setErr('请填写标题和内容')
-        return
-      }
-      try{
-        send.disabled=true
+  panel.addEventListener('change',(e)=>{
+    if(e.target?.closest?.('#forumPostCategory')){
+      state.forum.composeCategoryId=String(e.target.value||'')
+    }
+  })
+  panel.addEventListener('click',async(e)=>{
+    const cancel=e.target?.closest?.('#forumPostCancelBtn')
+    if(cancel){
+      closeDetail()
+      return
+    }
+    const send=e.target?.closest?.('#forumPostSendBtn')
+    if(!send)return
+    setErr('')
+    if(!state.auth.hasAccess){
+      setErr('请先登录')
+      return
+    }
+    const catId=String(catEl?.value||state.forum.composeCategoryId||'').trim()
+    const title=String(titleEl?.value||'').trim()
+    const body=String(bodyEl?.value||'').trim()
+    if(!catId){
+      setErr('请选择分类')
+      return
+    }
+    if(!title||!body){
+      setErr('请填写标题和内容')
+      return
+    }
+    try{
+      send.disabled=true
         const data=await apiPost(endpoints.forumCategoryThreads(catId),{title,body},null,{skipAuthWait:true})
         if(data?.error)throw new Error(data.message||'request failed')
         const threadId=String(data?.id||data?._id||data?.threadId||data?.thread_id||'')

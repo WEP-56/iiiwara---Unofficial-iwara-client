@@ -67,11 +67,13 @@ function renderVideoDetailPanel(ctx){
     return
   }
   panel.innerHTML=videoDetailPanelHtml(ctx)
-  const sel=document.getElementById('watchVideoQuality')
-  const vid=document.getElementById('watchVideoEl')
-  if(sel&&vid&&!sel.__bound){
-    sel.__bound=true
-    sel.addEventListener('change',()=>{
+  if(!panel._videoPanelDelegated){
+    panel._videoPanelDelegated=true
+    panel.addEventListener('change',(e)=>{
+      const sel=e.target?.closest?.('#watchVideoQuality')
+      if(!sel)return
+      const vid=document.getElementById('watchVideoEl')
+      if(!vid)return
       try{
         const t=vid.currentTime||0
         const paused=vid.paused
@@ -84,21 +86,18 @@ function renderVideoDetailPanel(ctx){
         }
       }catch{}
     })
-  }
-  const likeBtn=document.getElementById('watchLikeBtn')
-  if(likeBtn&&!likeBtn.__bound){
-    likeBtn.__bound=true
-    likeBtn.addEventListener('click',(e)=>{
-      e.stopPropagation()
-      toggleVideoLike(ctx)
-    })
-  }
-  const followBtn=document.getElementById('watchFollowBtn')
-  if(followBtn&&!followBtn.__bound){
-    followBtn.__bound=true
-    followBtn.addEventListener('click',(e)=>{
-      e.stopPropagation()
-      toggleVideoFollow(ctx)
+    panel.addEventListener('click',(e)=>{
+      const likeBtn=e.target?.closest?.('#watchLikeBtn')
+      if(likeBtn){
+        e.stopPropagation()
+        toggleVideoLike(ctx)
+        return
+      }
+      const followBtn=e.target?.closest?.('#watchFollowBtn')
+      if(followBtn){
+        e.stopPropagation()
+        toggleVideoFollow(ctx)
+      }
     })
   }
   bindUserLinks(panel)
@@ -162,29 +161,30 @@ async function toggleVideoFollow(ctx){
 
 function bindVideoDetailPageEvents(ctx){
   const { state, loadViewComments }=ctx
-  const side=document.getElementById('sideToggleBtn')
-  if(side&&!side.__bound){
-    side.__bound=true
-    side.addEventListener('click',()=>{
+  const content=document.getElementById('content')
+  if(!content)return
+  if(content._videoDetailPageEventsDelegated)return
+  content._videoDetailPageEventsDelegated=true
+  content.addEventListener('click',async(e)=>{
+    const side=e.target?.closest?.('#sideToggleBtn')
+    if(side){
       state.view.sideCollapsed=!state.view.sideCollapsed
       const right=document.querySelector('.watch-right')
       if(right)right.classList.toggle('collapsed',!!state.view.sideCollapsed)
       side.textContent=state.view.sideCollapsed?'‹':'›'
-    })
-  }
-  document.querySelectorAll('[data-wtab]').forEach((el)=>{
-    if(el.__bound)return
-    el.__bound=true
-    el.addEventListener('click',async()=>{
-      const tab=el.getAttribute('data-wtab')||'detail'
+      return
+    }
+    const tabEl=e.target?.closest?.('[data-wtab]')
+    if(tabEl){
+      const tab=tabEl.getAttribute('data-wtab')||'detail'
       state.view.tab=tab
-      document.querySelectorAll('[data-wtab]').forEach((x)=>x.classList.toggle('active',x===el))
+      document.querySelectorAll('[data-wtab]').forEach((x)=>x.classList.toggle('active',x===tabEl))
       if(tab==='comments'){
         const st=state.view.comments
         if(st.type&&st.id&&st.items.length===0)await loadViewComments(st,true)
       }
       renderVideoDetailPanel(ctx)
-    })
+    }
   })
 }
 

@@ -142,20 +142,22 @@ function renderThread(ctx){
 }
 
 function bindThreadPageEvents(ctx){
-  const more=document.getElementById('threadReplyMoreBtn')
-  if(more&&!more.__bound){
-    more.__bound=true
-    more.addEventListener('click',async()=>{
+  const content=document.getElementById('content')
+  if(!content)return
+  if(content._threadEventsDelegated)return
+  content._threadEventsDelegated=true
+  content.addEventListener('click',async(e)=>{
+    const more=e.target?.closest?.('#threadReplyMoreBtn')
+    if(more){
       await loadThreadPosts(ctx,false)
       renderThread(ctx)
-      bindThreadPageEvents(ctx)
-    })
-  }
-  const send=document.getElementById('threadReplySendBtn')
-  if(send&&!send.__bound){
-    send.__bound=true
-    send.addEventListener('click',()=>sendThreadReply(ctx))
-  }
+      return
+    }
+    const send=e.target?.closest?.('#threadReplySendBtn')
+    if(send){
+      sendThreadReply(ctx)
+    }
+  })
 }
 
 async function loadThreadView(ctx){

@@ -183,8 +183,8 @@ async function renderProfilePane(ctx,{token}={}){
 
       const list=document.getElementById('convList')
       const panel=document.getElementById('convPanel')
-      if(list&&panel&&!list.__convBound){
-        list.__convBound=true
+      if(list&&panel&&!list._convDelegated){
+        list._convDelegated=true
         list.addEventListener('click',async(e)=>{
           const el=e.target?.closest?.('.conv-item')
           const convId=el?.getAttribute?.('data-conv-id')||''
@@ -192,7 +192,8 @@ async function renderProfilePane(ctx,{token}={}){
           await loadAndRenderConversation(ctx,panel,convId,{reset:true})
         })
       }
-      if(panel){
+      if(panel&&!panel._convPanelDelegated){
+        panel._convPanelDelegated=true
         panel.addEventListener('click',async(e)=>{
           const more=e.target?.closest?.('#convMoreBtn')
           if(more){

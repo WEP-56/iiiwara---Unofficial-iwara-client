@@ -18,31 +18,29 @@ function bindSearchEvents(ctx){
   const content=document.getElementById('content')
   const resultsHost=document.getElementById('searchResults')
   if(!content||!resultsHost)return
-  if(input&&!input.__bound){
-    input.__bound=true
+  if(content._searchEventsDelegated)return
+  content._searchEventsDelegated=true
+  if(input){
     input.addEventListener('keydown',(e)=>{
       if(e.key==='Enter')runSearch(ctx,input.value)
     })
   }
-  content.querySelectorAll('.chip[data-stype]').forEach((el)=>{
-    if(el.__bound)return
-    el.__bound=true
-    el.addEventListener('click',async()=>{
-      const t=el.getAttribute('data-stype')
+  content.addEventListener('click',async(e)=>{
+    const chip=e.target?.closest?.('.chip[data-stype]')
+    if(chip){
+      const t=chip.getAttribute('data-stype')
       if(!t)return
       state.search.type=t
-      content.querySelectorAll('.chip[data-stype]').forEach(c=>c.classList.toggle('active',c===el))
+      content.querySelectorAll('.chip[data-stype]').forEach(c=>c.classList.toggle('active',c===chip))
       if(state.search.q)await runSearch(ctx,state.search.q)
-    })
-  })
-  content.querySelectorAll('.tag[data-tag]').forEach((el)=>{
-    if(el.__bound)return
-    el.__bound=true
-    el.addEventListener('click',()=>{
-      const t=el.getAttribute('data-tag')||''
+      return
+    }
+    const tag=e.target?.closest?.('.tag[data-tag]')
+    if(tag){
+      const t=tag.getAttribute('data-tag')||''
       if(input)input.value=t
       runSearch(ctx,t)
-    })
+    }
   })
 }
 

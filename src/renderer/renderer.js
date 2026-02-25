@@ -340,7 +340,7 @@ async function openImageDetail(imageId){
 
 function forumBodyHtml(s){
   const t=escapeHtml(String(s||''))
-  return t?`<div class="detail-desc">${t.replace(/\\n/g,'<br>')}</div>`:''
+  return t?`<div class="detail-desc">${t.replace(/\n/g,'<br>')}</div>`:''
 }
 
 async function openForumThreadDetail(categoryId,threadId){
@@ -409,15 +409,15 @@ async function loadUserTab(){
 function bindUserTabs(){
   const center=document.getElementById('detailCenter')
   if(!center)return
-  center.querySelectorAll('[data-utab]').forEach((el)=>{
-    if(el.__bound)return
-    el.__bound=true
-    el.addEventListener('click',async()=>{
-      const tab=el.getAttribute('data-utab')||'videos'
-      state.detail.user.tab=tab
-      center.querySelectorAll('[data-utab]').forEach(t=>t.classList.toggle('active',t===el))
-      await loadUserTab()
-    })
+  if(center._userTabsDelegated)return
+  center._userTabsDelegated=true
+  center.addEventListener('click',async(e)=>{
+    const el=e.target?.closest?.('[data-utab]')
+    if(!el)return
+    const tab=el.getAttribute('data-utab')||'videos'
+    state.detail.user.tab=tab
+    center.querySelectorAll('[data-utab]').forEach(t=>t.classList.toggle('active',t===el))
+    await loadUserTab()
   })
 }
 
@@ -547,20 +547,23 @@ async function loadMyPostsList(token=state.navToken){
 }
 
 function bindCreateEvents(token=state.navToken){
-  const loginBtn=document.getElementById('createLoginBtn')
-  if(loginBtn&&!loginBtn.__bound){
-    loginBtn.__bound=true
-    loginBtn.addEventListener('click',async()=>{await doLogin()})
-  }
-  const reloadBtn=document.getElementById('createMyPostsReload')
-  if(reloadBtn&&!reloadBtn.__bound){
-    reloadBtn.__bound=true
-    reloadBtn.addEventListener('click',async()=>{await loadMyPostsList(token)})
-  }
-  const postBtn=document.getElementById('createPostBtn')
-  if(postBtn&&!postBtn.__bound){
-    postBtn.__bound=true
-    postBtn.addEventListener('click',async()=>{
+  const content=document.getElementById('content')
+  if(!content)return
+  if(content._createEventsDelegated)return
+  content._createEventsDelegated=true
+  content.addEventListener('click',async(e)=>{
+    const loginBtn=e.target?.closest?.('#createLoginBtn')
+    if(loginBtn){
+      await doLogin()
+      return
+    }
+    const reloadBtn=e.target?.closest?.('#createMyPostsReload')
+    if(reloadBtn){
+      await loadMyPostsList(token)
+      return
+    }
+    const postBtn=e.target?.closest?.('#createPostBtn')
+    if(postBtn){
       const errEl=document.getElementById('createPostErr')
       const titleEl=document.getElementById('createPostTitle')
       const bodyEl=document.getElementById('createPostBody')
@@ -586,15 +589,16 @@ function bindCreateEvents(token=state.navToken){
       }finally{
         setLoading(false)
       }
-    })
-  }
+    }
+  })
 }
 
 function bindCardEvents(root){
   return bindings.bindCardEvents({openVideoDetail,openImageDetail,openUserDetail},root)
 }
 
-async function loadMoreIfNeeded(){if(!state.hasMore)return;if(!['home','video','image','forum'].includes(state.page))return;const content=document.getElementById('content');if(!content)return;const nearBottom=content.scrollTop+content.clientHeight>=content.scrollHeight-300;if(!nearBottom)return;if(state.loading)return;state.paging[state.page]=(state.paging[state.page]||0)+1;await fetchAndRenderAppend(false,state.navToken)}
+let loadMoreRafId=null
+function loadMoreIfNeeded(){if(loadMoreRafId)return;loadMoreRafId=requestAnimationFrame(async()=>{loadMoreRafId=null;if(!state.hasMore)return;if(!['home','video','image','forum'].includes(state.page))return;const content=document.getElementById('content');if(!content)return;const nearBottom=content.scrollTop+content.clientHeight>=content.scrollHeight-300;if(!nearBottom)return;if(state.loading)return;state.paging[state.page]=(state.paging[state.page]||0)+1;await fetchAndRenderAppend(false,state.navToken)})}
 
 function toggleRating(){const p=document.getElementById('ratPanel');if(!p)return;const isOpen=p.classList.toggle('open');if(!isOpen)return}
 function closeRating(){const p=document.getElementById('ratPanel');if(p)p.classList.remove('open')}
@@ -658,22 +662,21 @@ async function doLogin(){try{state.page='profile';document.querySelectorAll('.sb
 function bindForumEvents(){
   const content=document.getElementById('content')
   if(!content)return
-  const back=document.getElementById('forumBackBtn')
-  if(back&&!back.__bound){
-    back.__bound=true
-    back.addEventListener('click',async()=>{
+  if(content._forumEventsDelegated)return
+  content._forumEventsDelegated=true
+  content.addEventListener('click',async(e)=>{
+    const back=e.target?.closest?.('#forumBackBtn')
+    if(back){
       state.forum.view='cats'
       state.forum.categoryId=''
       state.forum.categoryLabel=''
       await reloadPage()
-    })
-  }
-  content.querySelectorAll('.fitem[data-fcat-id]').forEach((el)=>{
-    if(el.__bound)return
-    el.__bound=true
-    el.addEventListener('click',async()=>{
-      const id=el.getAttribute('data-fcat-id')||''
-      const label=el.getAttribute('data-fcat-label')||''
+      return
+    }
+    const fcat=e.target?.closest?.('.fitem[data-fcat-id]')
+    if(fcat){
+      const id=fcat.getAttribute('data-fcat-id')||''
+      const label=fcat.getAttribute('data-fcat-label')||''
       if(!id)return
       state.forum.view='threads'
       state.forum.categoryId=id
@@ -681,16 +684,14 @@ function bindForumEvents(){
       state.paging.forum=0
       state.hasMore=true
       await reloadPage()
-    })
-  })
-  content.querySelectorAll('.fitem[data-thread-id]').forEach((el)=>{
-    if(el.__boundThread)return
-    el.__boundThread=true
-    el.addEventListener('click',()=>{
-      const tid=el.getAttribute('data-thread-id')||''
-      const cid=el.getAttribute('data-thread-cat-id')||state.forum.categoryId||''
+      return
+    }
+    const thread=e.target?.closest?.('.fitem[data-thread-id]')
+    if(thread){
+      const tid=thread.getAttribute('data-thread-id')||''
+      const cid=thread.getAttribute('data-thread-cat-id')||state.forum.categoryId||''
       if(cid&&tid)openForumThreadDetail(cid,tid)
-    })
+    }
   })
 }
 
@@ -708,6 +709,21 @@ async function syncAuthState(){
   }catch{}
 }
 
+function errorPageHtml(msg){
+  return pageContainerHtml(`<div class="create-page" style="padding:30px 0"><div class="create-icon" style="font-size:28px">×</div><div class="create-sub">${escapeHtml(msg)}</div></div>`)
+}
+
+async function loadPage(content,fn,{clear=true}={}){
+  if(clear)content.innerHTML=''
+  try{
+    await fn()
+  }catch(e){
+    const msg=String(e?.message||e)
+    setStatus(msg,true)
+    content.innerHTML=errorPageHtml(msg)
+  }
+}
+
 async function renderPageInitial(){
   const content=document.getElementById('content')
   if(!content)return
@@ -722,74 +738,45 @@ async function renderPageInitial(){
   content.scrollTop=0
   content.classList.toggle('bleed',['watch','videoDetail','imageDetail','thread','user'].includes(state.page))
   if(state.page==='videoDetail'){
-    content.innerHTML=''
-    try{
+    await loadPage(content,async()=>{
       const mod=await import('./pages/videoDetail.js')
       await mod.renderVideoDetailPage(watchPageCtx())
-    }catch(e){
-      const msg=String(e?.message||e)
-      setStatus(msg,true)
-      content.innerHTML=pageContainerHtml(`<div class="create-page" style="padding:30px 0"><div class="create-icon" style="font-size:28px">×</div><div class="create-sub">${escapeHtml(msg)}</div></div>`)
-    }
+    })
     return
   }
   if(state.page==='imageDetail'){
-    content.innerHTML=''
-    try{
+    await loadPage(content,async()=>{
       const mod=await import('./pages/imageDetail.js')
       await mod.renderImageDetailPage(watchPageCtx())
-    }catch(e){
-      const msg=String(e?.message||e)
-      setStatus(msg,true)
-      content.innerHTML=pageContainerHtml(`<div class="create-page" style="padding:30px 0"><div class="create-icon" style="font-size:28px">×</div><div class="create-sub">${escapeHtml(msg)}</div></div>`)
-    }
+    })
     return
   }
   if(state.page==='watch'){
-    content.innerHTML=''
-    try{
+    await loadPage(content,async()=>{
       const mod=await import('./pages/watch.js')
       await mod.renderWatchPage(watchPageCtx())
-    }catch(e){
-      const msg=String(e?.message||e)
-      setStatus(msg,true)
-      content.innerHTML=pageContainerHtml(`<div class="create-page" style="padding:30px 0"><div class="create-icon" style="font-size:28px">×</div><div class="create-sub">${escapeHtml(msg)}</div></div>`)
-    }
+    })
     return
   }
   if(state.page==='thread'){
-    content.innerHTML=''
-    try{
+    await loadPage(content,async()=>{
       const mod=await import('./pages/thread.js')
       await mod.renderThreadPage(threadPageCtx())
-    }catch(e){
-      const msg=String(e?.message||e)
-      setStatus(msg,true)
-      content.innerHTML=pageContainerHtml(`<div class="create-page" style="padding:30px 0"><div class="create-icon" style="font-size:28px">×</div><div class="create-sub">${escapeHtml(msg)}</div></div>`)
-    }
+    })
     return
   }
   if(state.page==='user'){
-    content.innerHTML=''
-    try{
+    await loadPage(content,async()=>{
       const mod=await import('./pages/user.js')
       await mod.renderUserPage(userPageCtx())
-    }catch(e){
-      const msg=String(e?.message||e)
-      setStatus(msg,true)
-      content.innerHTML=pageContainerHtml(`<div class="create-page" style="padding:30px 0"><div class="create-icon" style="font-size:28px">×</div><div class="create-sub">${escapeHtml(msg)}</div></div>`)
-    }
+    })
     return
   }
   if(state.page==='search'){
-    try{
+    await loadPage(content,async()=>{
       const mod=await import('./pages/search.js')
       await mod.renderSearchPage(searchPageCtx())
-    }catch(e){
-      const msg=String(e?.message||e)
-      setStatus(msg,true)
-      content.innerHTML=pageContainerHtml(`<div class="create-page" style="padding:30px 0"><div class="create-icon" style="font-size:28px">×</div><div class="create-sub">${escapeHtml(msg)}</div></div>`)
-    }
+    },{clear:false})
     return
   }
   if(state.page==='create'){
@@ -803,25 +790,17 @@ async function renderPageInitial(){
     return
   }
   if(state.page==='profile'){
-    try{
+    await loadPage(content,async()=>{
       const mod=await import('./pages/account.js')
       await mod.renderAccountPage(accountPageCtx(),{token})
-    }catch(e){
-      const msg=String(e?.message||e)
-      setStatus(msg,true)
-      content.innerHTML=pageContainerHtml(`<div class="create-page" style="padding:30px 0"><div class="create-icon" style="font-size:28px">×</div><div class="create-sub">${escapeHtml(msg)}</div></div>`)
-    }
+    },{clear:false})
     return
   }
   if(state.page==='settings'){
-    try{
+    await loadPage(content,async()=>{
       const mod=await import('./pages/settings.js')
       await mod.renderSettingsPage(settingsPageCtx())
-    }catch(e){
-      const msg=String(e?.message||e)
-      setStatus(msg,true)
-      content.innerHTML=pageContainerHtml(`<div class="create-page" style="padding:30px 0"><div class="create-icon" style="font-size:28px">×</div><div class="create-sub">${escapeHtml(msg)}</div></div>`)
-    }
+    },{clear:false})
     return
   }
   content.innerHTML=pageContainerHtml(`<div class="create-page" style="padding:30px 0"><div class="create-icon" style="font-size:28px">○</div><div class="create-sub">加载中…</div></div>`)

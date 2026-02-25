@@ -737,30 +737,38 @@ ipcMain.handle("auth-login", async (event, { email, password }) => {
       return raw;
     };
 
-    let raw = await doLogin();
-    if (raw.status === 403 && looksForbidden(raw)) {
-      await ensureCloudflareGate();
-      raw = await doLogin();
+    const raw = await doLogin();
+    const json = raw && raw.json && typeof raw.json === "object" ? raw.json : null;
+
+    if (raw.status >= 200 && raw.status < 300 && json) {
+      const accessToken =
+        typeof json.accessToken === "string"
+          ? json.accessToken
+          : typeof json.token === "string"
+            ? json.token
+            : null;
+      const refreshToken =
+        typeof json.authToken === "string"
+          ? json.authToken
+          : typeof json.refreshToken === "string"
+            ? json.refreshToken
+            : typeof json.refresh_token === "string"
+              ? json.refresh_token
+              : null;
+
+      if (refreshToken) setAuthToken(refreshToken);
+      if (accessToken) {
+        setAccessToken(accessToken);
+        return { success: true, accessToken };
+      }
     }
 
-    const json = raw && raw.json ? raw.json : null;
-    if (raw.status >= 200 && raw.status < 300 && json && typeof json.token === "string") {
-      if (tokenType(json.token) !== "refresh_token" || isTokenExpired(json.token)) {
-        return { error: true, message: "Invalid refresh token" };
-      }
-      setAuthToken(json.token);
-      const r = await refreshAccessToken();
-      if (r.success) return { success: true, accessToken: r.accessToken };
-      if (r.isAuthError) clearTokens();
-      return { error: true, message: r.errorMessage || "Token refresh failed" };
-    }
-    if (raw.status === 403 && looksForbidden(raw)) {
-      return { error: true, message: "errors.forbidden" };
-    }
+    if (raw.status === 403 && looksForbidden(raw)) return { error: true, message: "errors.forbidden" };
+
     const msg =
       (json && typeof json.message === "string" ? json.message : null) ||
       String(raw && raw.text ? raw.text : "") ||
-      "Login failed";
+      `Login failed (${raw && raw.status ? raw.status : 0})`;
     return { error: true, message: msg };
   } catch (e) {
     return { error: true, message: String(e && e.message ? e.message : e) };

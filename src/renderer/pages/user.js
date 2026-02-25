@@ -115,34 +115,31 @@ function bindUserMediaEvents(ctx){
   const { state }=ctx
   const host=document.getElementById('userLeft')
   if(!host)return
-  host.querySelectorAll('[data-umtab]').forEach((el)=>{
-    if(el.__bound)return
-    el.__bound=true
-    el.addEventListener('click',async()=>{
-      const tab=el.getAttribute('data-umtab')||'videos'
+  if(host._userMediaEventsDelegated)return
+  host._userMediaEventsDelegated=true
+  host.addEventListener('click',async(e)=>{
+    const tabEl=e.target?.closest?.('[data-umtab]')
+    if(tabEl){
+      const tab=tabEl.getAttribute('data-umtab')||'videos'
       if(tab===state.view.user.tab)return
       state.view.user.tab=tab
-      host.querySelectorAll('[data-umtab]').forEach((x)=>x.classList.toggle('active',x===el))
+      host.querySelectorAll('[data-umtab]').forEach((x)=>x.classList.toggle('active',x===tabEl))
       await loadUserMedia(ctx,true)
       renderUserMedia(ctx)
-    })
-  })
-  const more=document.getElementById('userMediaMoreBtn')
-  if(more&&!more.__bound){
-    more.__bound=true
-    more.addEventListener('click',async()=>{
+      return
+    }
+    const more=e.target?.closest?.('#userMediaMoreBtn')
+    if(more){
       await loadUserMedia(ctx,false)
       renderUserMedia(ctx)
-    })
-  }
-  const follow=document.getElementById('userFollowBtn')
-  if(follow&&!follow.__bound){
-    follow.__bound=true
-    follow.addEventListener('click',(e)=>{
+      return
+    }
+    const follow=e.target?.closest?.('#userFollowBtn')
+    if(follow){
       e.stopPropagation()
       toggleUserFollow(ctx)
-    })
-  }
+    }
+  })
 }
 
 async function toggleUserFollow(ctx){
@@ -194,30 +191,31 @@ function renderUserPanel(ctx){
 
 function bindUserPageEvents(ctx){
   const { state, loadViewComments }=ctx
-  const side=document.getElementById('sideToggleBtn')
-  if(side&&!side.__bound){
-    side.__bound=true
-    side.addEventListener('click',()=>{
+  const content=document.getElementById('content')
+  if(!content)return
+  if(content._userPageEventsDelegated)return
+  content._userPageEventsDelegated=true
+  content.addEventListener('click',async(e)=>{
+    const side=e.target?.closest?.('#sideToggleBtn')
+    if(side){
       state.view.sideCollapsed=!state.view.sideCollapsed
       const right=document.querySelector('.watch-right')
       if(right)right.classList.toggle('collapsed',!!state.view.sideCollapsed)
       side.textContent=state.view.sideCollapsed?'‹':'›'
-    })
-  }
-  document.querySelectorAll('[data-utab]').forEach((el)=>{
-    if(el.__bound)return
-    el.__bound=true
-    el.addEventListener('click',async()=>{
-      const tab=el.getAttribute('data-utab')||'detail'
+      return
+    }
+    const tabEl=e.target?.closest?.('[data-utab]')
+    if(tabEl){
+      const tab=tabEl.getAttribute('data-utab')||'detail'
       state.view.tab=tab
-      document.querySelectorAll('[data-utab]').forEach((x)=>x.classList.toggle('active',x===el))
+      document.querySelectorAll('[data-utab]').forEach((x)=>x.classList.toggle('active',x===tabEl))
       if(tab==='comments'){
         const st=state.view.comments
         const items=Array.isArray(st?.items)?st.items:[]
         if(st?.type&&st?.id&&items.length===0)await loadViewComments(st,true)
       }
       renderUserPanel(ctx)
-    })
+    }
   })
 }
 
