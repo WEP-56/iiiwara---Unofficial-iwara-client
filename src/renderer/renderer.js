@@ -40,10 +40,55 @@ function applyPalette(paletteKey){
     btn.textContent=p.label
     btn.title=`配色：${p.label}`
   }
+  saveSetting('palette',p.key)
+}
+
+function saveSetting(key,val){
   try{
-    localStorage.setItem('palette',p.key)
-    localStorage.setItem('theme','dark')
+    const settings=JSON.parse(localStorage.getItem('iwara_settings')||'{}')
+    settings[key]=val
+    localStorage.setItem('iwara_settings',JSON.stringify(settings))
   }catch{}
+}
+
+function loadSettings(){
+  try{
+    const settings=JSON.parse(localStorage.getItem('iwara_settings')||'{}')
+    
+    // 加载配色
+    if(settings.palette==='custom'&&settings.paletteCustom){
+      state.palette='custom'
+      state.paletteCustom=settings.paletteCustom
+      const hex=settings.paletteCustom
+      const s=document.documentElement.style
+      s.setProperty('--ac',hex)
+      s.setProperty('--ac-dim',hex+'1c')
+      s.setProperty('--ac-bd',hex+'42')
+    }else if(settings.palette){
+      applyPalette(settings.palette)
+    }
+
+    if(settings.sidebarCollapsed!==undefined)setSidebarCollapsed(!!settings.sidebarCollapsed)
+    if(settings.immersive){
+      const app=document.querySelector('.app')
+      if(app)app.classList.add('immersive')
+    }
+    if(settings.rating)state.rating={...state.rating,...settings.rating}
+    // 更多设置可以在此加载
+  }catch{}
+}
+
+function setSidebarCollapsed(collapsed){
+  state.sidebarCollapsed=collapsed
+  const sb=document.getElementById('sb')
+  if(sb)sb.classList.toggle('collapsed',collapsed)
+  const tog=document.getElementById('sbTog')
+  if(tog)tog.textContent=collapsed?'›':'‹'
+  saveSetting('sidebarCollapsed',collapsed)
+}
+
+function toggleSidebar(){
+  setSidebarCollapsed(!state.sidebarCollapsed)
 }
 function nextPaletteKey(cur){
   const idx=Math.max(0,PALETTES.findIndex((p)=>p.key===cur))
@@ -307,7 +352,16 @@ function accountPageCtx(){
 
 function settingsPageCtx(){
   return {
-    pageContainerHtml
+    pageContainerHtml,
+    escapeHtml,
+    setStatus,
+    applyPalette,
+    PALETTES,
+    state,
+    openDetailShell,
+    setDetailTitle,
+    setDetailBodyHtml,
+    closeDetail
   }
 }
 
@@ -447,7 +501,7 @@ function imageTitle(img){return renderers.imageTitle(img)}
 function imageCount(img){return renderers.imageCount(img)}
 
 function sectionHead(title,count,more){return renderers.sectionHead(title,count,more)}
-function renderFilterbar(chips,active){return `<div class="filterbar">${chips.map((c)=>`<div class="chip${c===active?' active':''}" data-chip="${c}">${c}</div>`).join('')}<div class="fb-sep"></div><div class="fb-sort" id="sortBtn">排序 ↕</div></div>`}
+function renderFilterbar(chips,active){return `<div class="filterbar">${chips.map((c)=>`<div class="chip${c===active?' active':''}" data-chip="${c}">${c}</div>`).join('')}</div>`}
 function renderSubnav(items,active){return `<div class="subnav">${items.map((it)=>`<div class="subnav-item${it===active?' active':''}" data-sub="${it}">${it}</div>`).join('')}</div>`}
 
 function bindSubareaEvents(){const subarea=document.getElementById('subarea');if(!subarea)return;subarea.querySelectorAll('.chip[data-chip]').forEach((el)=>{el.addEventListener('click',async()=>{const chip=el.getAttribute('data-chip');if(!chip)return;state.chip[state.page]=chip;if(state.page==='forum'){state.forum.group=forumGroupFromChip(chip);state.forum.view='cats';state.forum.categoryId='';state.forum.categoryLabel=''}subarea.querySelectorAll('.chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');await reloadPage()})});subarea.querySelectorAll('.subnav-item[data-sub]').forEach((el)=>{el.addEventListener('click',async()=>{const tab=el.getAttribute('data-sub');if(!tab)return;state.sub[state.page]=tab;subarea.querySelectorAll('.subnav-item').forEach(c=>c.classList.remove('active'));el.classList.add('active');await reloadPage()})})}
@@ -602,7 +656,6 @@ function loadMoreIfNeeded(){if(loadMoreRafId)return;loadMoreRafId=requestAnimati
 
 function toggleRating(){const p=document.getElementById('ratPanel');if(!p)return;const isOpen=p.classList.toggle('open');if(!isOpen)return}
 function closeRating(){const p=document.getElementById('ratPanel');if(p)p.classList.remove('open')}
-function toggleSidebar(){state.sidebarCollapsed=!state.sidebarCollapsed;const sb=document.getElementById('sb');if(sb)sb.classList.toggle('collapsed',state.sidebarCollapsed);const tog=document.getElementById('sbTog');if(tog)tog.textContent=state.sidebarCollapsed?'›':'‹'}
 
 function toggleUpdatePanel(){
   const p=document.getElementById('updPanel')
@@ -803,6 +856,13 @@ async function renderPageInitial(){
     },{clear:false})
     return
   }
+  if(state.page==='history'){
+    await loadPage(content,async()=>{
+      const mod=await import('./pages/history.js')
+      await mod.renderHistoryPage(accountPageCtx(),content)
+    },{clear:false})
+    return
+  }
   content.innerHTML=pageContainerHtml(`<div class="create-page" style="padding:30px 0"><div class="create-icon" style="font-size:28px">○</div><div class="create-sub">加载中…</div></div>`)
   await fetchAndRenderAppend(true,token)
 }
@@ -919,7 +979,8 @@ document.addEventListener('DOMContentLoaded',async()=>{
   if(topImm)topImm.addEventListener('click',()=>{
     const app=document.querySelector('.app')
     if(!app)return
-    app.classList.toggle('immersive')
+    const isImm=app.classList.toggle('immersive')
+    saveSetting('immersive',isImm)
   })
 
   document.addEventListener('keydown',(e)=>{
@@ -947,6 +1008,8 @@ document.addEventListener('DOMContentLoaded',async()=>{
   },true)
 
   await syncAuthState()
+
+  loadSettings()
 
   const acc=document.getElementById('accountBtn')
   if(acc){
@@ -976,6 +1039,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
       if(!k)return
       state.rating[k]=!state.rating[k]
       el.classList.toggle('on',state.rating[k])
+      saveSetting('rating',state.rating)
       await reloadPage()
     })
   })

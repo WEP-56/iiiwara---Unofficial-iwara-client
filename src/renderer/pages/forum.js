@@ -15,7 +15,7 @@ export async function renderForumAppend(ctx,{reset,token}){
     bindForumComposeEntryEvents(ctx,cats)
     return
   }
-  const head=`<div class="sh"><div class="sh-t">${escapeHtml(state.forum.categoryLabel||'论坛')}</div><div class="sh-m" id="forumBackBtn">返回分类 ›</div></div>`
+  const head=`<div class="sh"><div class="sh-t">${escapeHtml(state.forum.categoryLabel||'论坛')}</div><div class="sh-more" id="forumBackBtn">返回分类 ›</div></div>`
   const results=r.results||[]
   if(reset){
     content.innerHTML=pageContainerHtml(`${head}${renderForumList(results)}`)
@@ -112,23 +112,22 @@ function bindForumComposerEvents(ctx,cats){
     }
     try{
       send.disabled=true
-        const data=await apiPost(endpoints.forumCategoryThreads(catId),{title,body},null,{skipAuthWait:true})
-        if(data?.error)throw new Error(data.message||'request failed')
-        const threadId=String(data?.id||data?._id||data?.threadId||data?.thread_id||'')
-        setStatus('已发布',false)
-        closeDetail()
-        if(threadId){
-          openForumThreadDetail(catId,threadId)
-        }else{
-          await loadForumCategories(ctx).catch(()=>{})
-        }
-      }catch(e){
-        setErr(String(e?.message||e))
-      }finally{
-        send.disabled=false
+      const data=await apiPost(endpoints.forumCategoryThreads(catId),{title,body},null,{skipAuthWait:true})
+      if(data?.error)throw new Error(data.message||'request failed')
+      const threadId=String(data?.id||data?._id||data?.threadId||data?.thread_id||'')
+      setStatus('已发布',false)
+      closeDetail()
+      if(threadId){
+        openForumThreadDetail(catId,threadId)
+      }else{
+        await loadForumCategories(ctx).catch(()=>{})
       }
-    })
-  }
+    }catch(e){
+      setErr(String(e?.message||e))
+    }finally{
+      send.disabled=false
+    }
+  })
 }
 
 async function loadForumCategories(ctx){

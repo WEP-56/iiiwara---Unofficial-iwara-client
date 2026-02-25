@@ -1,9 +1,9 @@
 export function sectionHead(title,count,more){
-  return `<div class="sh"><div class="sh-t">${title}</div>${count?`<div class="sh-c">${count}</div>`:''}${more?`<div class="sh-m" data-more="${more}">${more} ›</div>`:''}</div>`
+  return `<div class="sh"><div class="sh-t">${title}</div>${count?`<div class="sh-c">${count}</div>`:''}${more?`<div class="sh-more" data-more="${more}">${more} ›</div>`:''}</div>`
 }
 
 export function pageContainerHtml(inner){
-  return `<div class="pg">${inner}</div>`
+  return `<div class="page-container">${inner}</div>`
 }
 
 export function videoThumbnailUrl(ctx,v){

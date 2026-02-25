@@ -4,6 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const net = require("net");
 const { URL } = require("url");
+const history = require("./src/main/history");
 
 let mainWindow;
 let iwaraSession;
@@ -784,4 +785,25 @@ ipcMain.handle("auth-status", async () => {
   const hasRefresh = !!tokenState.authToken && !isTokenExpired(tokenState.authToken);
   const hasAccess = !!tokenState.accessToken && !isTokenExpired(tokenState.accessToken, 5 * 60);
   return { hasRefresh, hasAccess, isRefreshing: !!tokenState.refreshing };
+});
+
+// 历史记录 IPC 处理
+ipcMain.handle("history-add", async (event, item) => {
+  return history.addHistoryItem(item);
+});
+
+ipcMain.handle("history-list", async (event, params) => {
+  return history.listHistory(params || {});
+});
+
+ipcMain.handle("history-remove", async (event, id) => {
+  return history.removeHistory(id);
+});
+
+ipcMain.handle("history-clear", async (event, params) => {
+  return history.clearHistory(params || {});
+});
+
+ipcMain.handle("history-stats", async () => {
+  return history.getHistoryStats();
 });

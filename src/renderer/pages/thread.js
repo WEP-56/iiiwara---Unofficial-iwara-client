@@ -171,6 +171,11 @@ async function loadThreadView(ctx){
     const posts=pickForumPosts(data)
     state.view.thread.data=thread
     setPageTitle(thread?.title||'帖子')
+    // 添加到历史记录
+    try{
+      const { addThreadHistory }=await import('../core/history.js')
+      await addThreadHistory(thread)
+    }catch(e){/* ignore history errors */}
     const mapped=posts.map(forumPostToCommentLike)
     state.view.thread.posts=mapped
     state.view.thread.postsPage=0

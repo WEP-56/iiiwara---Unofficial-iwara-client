@@ -46,4 +46,25 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("update-state", handler);
     return () => ipcRenderer.removeListener("update-state", handler);
   },
+
+  // 历史记录 API
+  historyAdd: async (item) => {
+    return await ipcRenderer.invoke("history-add", item);
+  },
+
+  historyList: async (params) => {
+    return await ipcRenderer.invoke("history-list", params);
+  },
+
+  historyRemove: async (id) => {
+    return await ipcRenderer.invoke("history-remove", id);
+  },
+
+  historyClear: async (params) => {
+    return await ipcRenderer.invoke("history-clear", params);
+  },
+
+  historyStats: async () => {
+    return await ipcRenderer.invoke("history-stats");
+  },
 });

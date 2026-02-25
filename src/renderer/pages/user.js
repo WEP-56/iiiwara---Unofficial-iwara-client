@@ -36,7 +36,7 @@ function renderUserLeft(ctx){
   const following=!!u?.following
   const followHtml=(u?.id?`<div class="detail-actions" style="margin-left:auto"><div class="detail-btn" id="userFollowBtn" title="${following?'取消订阅':'订阅'}">${following?'✓':'+'}</div></div>`:'')
   const tabs=[['videos','视频'],['images','图片']]
-  host.innerHTML=`<div class="pg" style="padding:16px"><div class="sh"><div class="sh-t">${title}</div>${followHtml}</div><div class="detail-tabs" id="userMediaTabs">${tabs.map(([k,l])=>`<div class="detail-tab${k===tab?' active':''}" data-umtab="${k}">${l}</div>`).join('')}</div><div id="userMediaBody"></div></div>`
+  host.innerHTML=`<div class="page-container" style="padding:16px"><div class="sh"><div class="sh-t">${title}</div>${followHtml}</div><div class="detail-tabs" id="userMediaTabs">${tabs.map(([k,l])=>`<div class="detail-tab${k===tab?' active':''}" data-umtab="${k}">${l}</div>`).join('')}</div><div id="userMediaBody"></div></div>`
   renderUserMedia(ctx)
   bindUserMediaEvents(ctx)
   bindUserLinks(host)
@@ -302,7 +302,7 @@ async function loadUserView(ctx){
     let msg=String(e?.message||e)
     if(msg.includes('errors.notFound')||msg.toLowerCase().includes('notfound'))msg='用户不存在或已删除'
     const host=document.getElementById('userLeft')
-    if(host)host.innerHTML=`<div class="pg" style="padding:16px"><div class="detail-loading">${escapeHtml(msg)}</div></div>`
+    if(host)host.innerHTML=`<div class="page-container" style="padding:16px"><div class="detail-loading">${escapeHtml(msg)}</div></div>`
     const panel=document.getElementById('userPanel')
     if(panel)panel.innerHTML=`<div class="detail-loading">${escapeHtml(msg)}</div>`
   }

@@ -83,11 +83,27 @@ async function renderProfilePane(ctx,{token}={}){
   const { state, endpoints, apiGet, apiPost, pickResults, escapeHtml, escapeAttr, sectionHead, renderUserList, bindUserLinks, bindCardEvents }=ctx
   const host=document.getElementById('profilePaneBody')
   if(!host)return
-  if(!state.auth.hasAccess)return
+  
+  const tab=String(state.sub.profile||'订阅')
+  
+  // 历史记录功能在本地实现，不需要登录限制
+  if(tab==='历史'){
+    const { renderHistoryPage } = await import('./history.js')
+    host.innerHTML=`<div id="historyPaneHost"></div>`
+    const historyHost=document.getElementById('historyPaneHost')
+    if(historyHost){
+      await renderHistoryPage(ctx,historyHost)
+    }
+    return
+  }
+
+  if(!state.auth.hasAccess){
+    host.innerHTML=`<div class="detail-loading">请登录后查看${escapeHtml(tab)}</div>`
+    return
+  }
   if(token!==undefined&&token!==null&&token!==state.navToken)return
 
   const meId=String(state.me?.id||'')
-  const tab=String(state.sub.profile||'订阅')
   if(!meId){
     host.innerHTML=`<div class="detail-loading">未登录</div>`
     return
@@ -228,11 +244,6 @@ async function renderProfilePane(ctx,{token}={}){
       }else if(panel){
         panel.innerHTML=`<div class="detail-loading">暂无会话</div>`
       }
-      return
-    }
-
-    if(tab==='历史'){
-      host.innerHTML=`${sectionHead('历史',0,'')}<div class="detail-loading">占位：后续接入本地历史记录</div>`
       return
     }
 

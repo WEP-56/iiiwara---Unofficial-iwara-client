@@ -260,6 +260,11 @@ async function loadImageDetailView(ctx){
     const img=(data?.image&&data.image.id)?data.image:data
     state.view.data=img
     setPageTitle(imageTitle(img))
+    // 添加到历史记录
+    try{
+      const { addImageHistory }=await import('../core/history.js')
+      await addImageHistory(img)
+    }catch(e){/* ignore history errors */}
     state.view.comments={type:'image',id:state.view.id,page:0,hasMore:true,loading:false,items:[]}
     await loadViewComments(state.view.comments,true)
     renderImageDetailMedia(ctx)

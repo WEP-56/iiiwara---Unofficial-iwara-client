@@ -51,8 +51,16 @@ function renderVideoDetailMedia(ctx){
     left.innerHTML=`<div class="watch-player"><iframe src="${src}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`
     return
   }
+  
+  // 检查是否静音启动
+  let muteAttr=''
+  try{
+    const settings=JSON.parse(localStorage.getItem('iwara_settings')||'{}')
+    if(settings.muteStart)muteAttr='muted'
+  }catch{}
+
   const src=escapeAttr(String(state.view.sourceUrl||''))
-  left.innerHTML=`<div class="watch-player"><video id="watchVideoEl" ${src?`src="${src}"`:''} controls autoplay playsinline></video></div>`
+  left.innerHTML=`<div class="watch-player"><video id="watchVideoEl" ${src?`src="${src}"`:''} controls autoplay playsinline ${muteAttr}></video></div>`
 }
 
 function renderVideoDetailPanel(ctx){
@@ -210,6 +218,11 @@ async function loadVideoDetailView(ctx){
     const v=(data?.video&&data.video.id)?data.video:data
     state.view.data=v
     setPageTitle(videoTitle(v))
+    // 添加到历史记录
+    try{
+      const { addVideoHistory }=await import('../core/history.js')
+      await addVideoHistory(v)
+    }catch(e){/* ignore history errors */}
     const embed=v?.embedUrl||v?.embed_url
     if(!embed){
       let sources=v?.videoSources||v?.video_sources||null
