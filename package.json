@@ -39,6 +39,7 @@
       "!**/*.md"
     ],
     "win": {
+      "icon": "img/favicon.ico",
       "target": [
         {
           "target": "nsis",

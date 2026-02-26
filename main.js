@@ -126,10 +126,16 @@ function setAuthToken(token) {
 }
 
 function setAccessToken(token) {
-  tokenState.accessToken = token || null;
+  const next = token || null;
+  if (next && tokenType(next) !== "access_token") {
+    console.warn("[Token] Ignored non-access token in setAccessToken");
+    return false;
+  }
+  tokenState.accessToken = next;
   tokenState.accessExpireAtMs = tokenState.accessToken ? tokenExpireAtMs(tokenState.accessToken) : null;
   apiToken = tokenState.accessToken;
   saveTokensToDisk();
+  return true;
 }
 
 function clearTokens() {
@@ -331,10 +337,11 @@ function isCloudflareChallenge(res) {
   const cfMitigated = headers["cf-mitigated"] || headers["CF-Mitigated"];
   const cfMitigatedValue = Array.isArray(cfMitigated) ? cfMitigated[0] : cfMitigated;
   if (String(cfMitigatedValue || "").toLowerCase() === "challenge") return true;
-  const msg = (res.json && typeof res.json.message === "string" ? res.json.message : "") || "";
-  if (msg === "errors.forbidden") return true;
   const text = String(res.text || "");
-  if (text.includes("cf-mitigated") || text.includes("cloudflare") || text.includes("errors.forbidden")) return true;
+  const lower = text.toLowerCase();
+  if (text.includes("cf-mitigated")) return true;
+  if (lower.includes("<title>just a moment")) return true;
+  if (lower.includes("cf_chl_") || lower.includes("cloudflare challenge")) return true;
   return false;
 }
 
@@ -797,7 +804,13 @@ ipcMain.handle("update-install", async () => {
 // 接收前端传来的 Token (从 Webview 中提取)
 ipcMain.on("set-api-token", (event, token) => {
   console.log("Token received via IPC:", token ? token.substring(0, 20) + "..." : "null");
-  setAccessToken(token);
+  if (!token) {
+    setAccessToken(null);
+    return;
+  }
+  if (!setAccessToken(token)) {
+    console.warn("[Token] set-api-token rejected invalid token type");
+  }
 });
 
 // 代理 API 请求 (绕过 CORS 和 Cloudflare)
@@ -840,27 +853,34 @@ ipcMain.handle("auth-login", async (event, { email, password }) => {
     const json = raw && raw.json && typeof raw.json === "object" ? raw.json : null;
 
     if (raw.status >= 200 && raw.status < 300 && json) {
-      const accessToken =
-        typeof json.accessToken === "string"
-          ? json.accessToken
-          : typeof json.token === "string"
-            ? json.token
-            : null;
-      const refreshToken =
+      const loginToken =
         typeof json.authToken === "string"
           ? json.authToken
           : typeof json.refreshToken === "string"
             ? json.refreshToken
             : typeof json.refresh_token === "string"
               ? json.refresh_token
-              : null;
+              : typeof json.token === "string"
+                ? json.token
+                : null;
 
-      if (refreshToken) setAuthToken(refreshToken);
-      if (accessToken) {
-        setAccessToken(accessToken);
+      if (loginToken) {
+        const t = tokenType(loginToken);
+        if (t === "refresh_token") setAuthToken(loginToken);
+        if (t === "access_token") setAccessToken(loginToken);
+      }
+
+      if (!tokenState.accessToken && tokenState.authToken && !isTokenExpired(tokenState.authToken)) {
+        const refreshed = await refreshAccessToken();
+        if (!refreshed.success) {
+          return { error: true, message: refreshed.errorMessage || "Failed to get access token" };
+        }
+      }
+
+      if (tokenState.accessToken) {
         // 保存账号密码用于自动登录
         saveCredentials(email, password);
-        return { success: true, accessToken };
+        return { success: true, accessToken: tokenState.accessToken };
       }
     }
 
@@ -928,26 +948,35 @@ ipcMain.handle("auth-auto-login", async () => {
   const json = raw && raw.json && typeof raw.json === "object" ? raw.json : null;
 
   if (raw.status >= 200 && raw.status < 300 && json) {
-    const accessToken =
-      typeof json.accessToken === "string"
-        ? json.accessToken
-        : typeof json.token === "string"
-          ? json.token
-          : null;
-    const refreshToken =
+    const loginToken =
       typeof json.authToken === "string"
         ? json.authToken
         : typeof json.refreshToken === "string"
           ? json.refreshToken
           : typeof json.refresh_token === "string"
             ? json.refresh_token
-            : null;
+            : typeof json.token === "string"
+              ? json.token
+              : null;
 
-    if (refreshToken) setAuthToken(refreshToken);
-    if (accessToken) {
-      setAccessToken(accessToken);
+    if (loginToken) {
+      const t = tokenType(loginToken);
+      if (t === "refresh_token") setAuthToken(loginToken);
+      if (t === "access_token") setAccessToken(loginToken);
+    }
+
+    if (!tokenState.accessToken && tokenState.authToken && !isTokenExpired(tokenState.authToken)) {
+      const refreshed = await refreshAccessToken();
+      if (!refreshed.success) {
+        const msg = refreshed.errorMessage || "Failed to get access token";
+        console.error("[Auth] Auto-login refresh failed:", msg);
+        return { error: true, message: msg };
+      }
+    }
+
+    if (tokenState.accessToken) {
       console.log("[Auth] Auto-login success");
-      return { success: true, accessToken };
+      return { success: true, accessToken: tokenState.accessToken };
     }
   }
 
