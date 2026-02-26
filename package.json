@@ -1,6 +1,6 @@
 {
   "name": "iwara-electron-client",
-  "version": "0.2.0",
+  "version": "0.2.11",
   "description": "Iwara.tv third-party Electron desktop client",
   "main": "main.js",
   "scripts": {
