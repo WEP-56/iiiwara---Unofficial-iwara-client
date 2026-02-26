@@ -1,5 +1,6 @@
 import { state } from './state.js'
 import { setDetailRightHtml } from './detailOverlay.js'
+import { linkifyText } from '../utils/linkify.js'
 
 function commentLikeUser(u){
   const name=u?.name||u?.username||'User'
@@ -33,10 +34,10 @@ export function commentItemHtml(ctx,x){
   const { escapeHtml, escapeAttr }=ctx
   const u=commentLikeUser(x?.user)
   const time=escapeHtml(commentLikeTime(x))
-  const body=escapeHtml(commentLikeBody(x))
+  const body=linkifyText(commentLikeBody(x),{escapeHtml,escapeAttr})
   const userHtml=u.id?`<span class="ulink" data-user-id="${escapeAttr(u.id)}">${escapeHtml(u.name)}</span>`:escapeHtml(u.name)
   const avImg=u.avatarUrl?`<img class="av-img" src="${escapeAttr(u.avatarUrl)}" alt="" onerror="this.remove()">`:''
-  return `<div class="cmt-item"><div class="cmt-av">${avImg}${escapeHtml(u.av)}</div><div class="cmt-main"><div class="cmt-head"><div class="cmt-user">${userHtml}</div>${time?`<div class="cmt-time">${time}</div>`:''}</div><div class="cmt-body">${body?body.replace(/\\n/g,'<br>'):'—'}</div></div></div>`
+  return `<div class="cmt-item"><div class="cmt-av">${avImg}${escapeHtml(u.av)}</div><div class="cmt-main"><div class="cmt-head"><div class="cmt-user">${userHtml}</div>${time?`<div class="cmt-time">${time}</div>`:''}</div><div class="cmt-body">${body||'—'}</div></div></div>`
 }
 
 function detailCommentsPanelHtml(ctx,title){

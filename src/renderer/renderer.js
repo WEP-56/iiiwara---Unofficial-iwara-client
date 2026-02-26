@@ -138,6 +138,50 @@ function saveSetting(key,val){
   }catch{}
 }
 
+const EXTERNAL_LINK_CONFIRM_KEY='iwara_skip_external_link_confirm'
+
+function shouldSkipExternalLinkConfirm(){
+  try{return localStorage.getItem(EXTERNAL_LINK_CONFIRM_KEY)==='1'}catch{return false}
+}
+
+function setSkipExternalLinkConfirm(skip){
+  try{
+    if(skip)localStorage.setItem(EXTERNAL_LINK_CONFIRM_KEY,'1')
+    else localStorage.removeItem(EXTERNAL_LINK_CONFIRM_KEY)
+  }catch{}
+}
+
+function askExternalLinkConfirm(url){
+  return new Promise((resolve)=>{
+    const old=document.getElementById('extLinkConfirm')
+    if(old)old.remove()
+    const host=document.createElement('div')
+    host.id='extLinkConfirm'
+    host.className='ext-confirm'
+    host.innerHTML=`<div class="ext-confirm-card"><div class="ext-confirm-title">打开外部链接？</div><div class="ext-confirm-url">${escapeHtml(url)}</div><label class="ext-confirm-check"><input id="extConfirmSkip" type="checkbox">不再提醒</label><div class="ext-confirm-actions"><button class="upd-btn" id="extConfirmCancel">取消</button><button class="upd-btn pri" id="extConfirmOpen">打开</button></div></div>`
+    const done=(ok)=>{
+      const skip=host.querySelector('#extConfirmSkip')?.checked
+      if(skip)setSkipExternalLinkConfirm(true)
+      host.remove()
+      resolve(ok)
+    }
+    host.addEventListener('click',(e)=>{if(e.target===host)done(false)})
+    host.querySelector('#extConfirmCancel')?.addEventListener('click',()=>done(false))
+    host.querySelector('#extConfirmOpen')?.addEventListener('click',()=>done(true))
+    document.body.appendChild(host)
+  })
+}
+
+async function openExternalLinkByUser(url){
+  if(!url||!window.electronAPI?.openExternalUrl)return
+  const shouldOpen=shouldSkipExternalLinkConfirm()?true:await askExternalLinkConfirm(url)
+  if(!shouldOpen)return
+  const r=await window.electronAPI.openExternalUrl(url)
+  if(!r?.success){
+    setStatus(r?.error||'无法打开链接',true)
+  }
+}
+
 // 默认快捷键配置
 const DEFAULT_SHORTCUTS={
   'playPause':'Space',
@@ -573,6 +617,8 @@ function accountPageCtx(){
     pageContainerHtml,
     sectionHead,
     renderUserList,
+    renderVideosGrid,
+    renderImagesMasonry,
     bindUserLinks,
     bindCardEvents,
     setStatus,
@@ -921,6 +967,7 @@ function applyUpdateStateToUi(st){
   const nv=document.getElementById('updNewVer')
   const msg=document.getElementById('updMsg')
   const installBtn=document.getElementById('updInstallBtn')
+  const manual=!!(st?.manualDownloadUrl||st?.manualReleaseUrl)
   if(cur)cur.textContent=st?.currentVersion||'—'
   if(nv)nv.textContent=st?.newVersion||'—'
   if(msg){
@@ -928,15 +975,22 @@ function applyUpdateStateToUi(st){
     else if(st?.error)msg.textContent=String(st.error)
     else if(st?.downloaded)msg.textContent='更新已下载，可重启安装'
     else if(st?.available){
+      if(manual){
+        msg.textContent='发现新版本，点击“前往下载”在浏览器下载安装'
+      }else{
       const p=st?.progress
       if(p&&typeof p.percent==='number'){
         const pct=`${Math.round(p.percent*10)/10}%`
         const extra=p.total?`（${fmtBytes(p.transferred)}/${fmtBytes(p.total)}）`:''
         msg.textContent=`正在下载… ${pct}${extra}`
       }else msg.textContent='发现新版本，正在下载…'
+      }
     }else msg.textContent=st?.supported===false?'仅打包版本支持自动更新':'已是最新版本'
   }
-  if(installBtn)installBtn.disabled=!(st&&st.downloaded)
+  if(installBtn){
+    installBtn.textContent=manual?'前往下载':'重启安装'
+    installBtn.disabled=!(st&&(st.downloaded||manual))
+  }
 }
 
 async function syncUpdateUi(){
@@ -1257,6 +1311,16 @@ document.addEventListener('DOMContentLoaded',async()=>{
     if(p.contains(t))return
     if(btn&&btn.contains(t))return
     closeUpdatePanel()
+  },true)
+
+  document.addEventListener('click',async(e)=>{
+    const link=e.target?.closest?.('a[data-external-url]')
+    if(!link)return
+    const url=link.getAttribute('data-external-url')||link.getAttribute('href')||''
+    if(!url)return
+    e.preventDefault()
+    e.stopPropagation()
+    await openExternalLinkByUser(url)
   },true)
 
   await syncAuthState()

@@ -365,6 +365,16 @@ button,input,select,textarea{font:inherit}
 .upd-btn.pri{background:var(--ac-dim);border-color:var(--ac-bd);color:var(--ac)}
 .upd-btn.pri:hover{background:var(--ac);color:#fff}
 
+.ext-link{color:#60a5fa;text-decoration:underline;text-underline-offset:2px;word-break:break-all}
+.ext-link:hover{color:#93c5fd}
+
+.ext-confirm{position:fixed;inset:0;background:rgba(6,10,18,.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px}
+.ext-confirm-card{width:min(560px,96vw);background:var(--bg-1);border:1px solid var(--b1);border-radius:12px;box-shadow:var(--sh);padding:14px}
+.ext-confirm-title{font-size:14px;font-weight:600;color:var(--t0)}
+.ext-confirm-url{margin-top:8px;font-size:12px;line-height:1.45;color:#93c5fd;word-break:break-all}
+.ext-confirm-check{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--t1)}
+.ext-confirm-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+
 /* Forum Compose Entry */
 .forum-compose-entry{position:fixed;right:24px;bottom:24px;z-index:50}
 .fab-plus{width:56px;height:56px;border-radius:50%;background:var(--ac);border:none;box-shadow:0 4px 12px rgba(0,0,0,.4),0 0 0 1px var(--ac-bd);color:#fff;font-size:24px;font-weight:300;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center}

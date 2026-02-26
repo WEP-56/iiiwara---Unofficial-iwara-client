@@ -1,3 +1,5 @@
+import { linkifyText } from '../utils/linkify.js'
+
 export async function renderThreadPage(ctx){
   const content=document.getElementById('content')
   if(!content)return
@@ -76,9 +78,9 @@ async function sendThreadReply(ctx){
 }
 
 function floorBodyHtml(ctx,s){
-  const { escapeHtml }=ctx
-  const t=escapeHtml(String(s||''))
-  return `<div class="floor-body">${t?t.replace(/\\n/g,'<br>'):'—'}</div>`
+  const { escapeHtml, escapeAttr }=ctx
+  const t=linkifyText(String(s||''),{escapeHtml,escapeAttr})
+  return `<div class="floor-body">${t||'—'}</div>`
 }
 
 function floorItemHtml(ctx,x,n){

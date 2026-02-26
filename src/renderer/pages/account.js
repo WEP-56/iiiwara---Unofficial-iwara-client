@@ -1,3 +1,5 @@
+import { linkifyText } from '../utils/linkify.js'
+
 export async function renderAccountPage(ctx,{token}={}){
   const { state, ensureMeLoaded, setStatus }=ctx
   const content=document.getElementById('content')
@@ -93,7 +95,7 @@ async function ensureProfileCountsLoaded(ctx,{token}={}){
 }
 
 async function renderProfilePane(ctx,{token}={}){
-  const { state, endpoints, apiGet, apiPost, pickResults, escapeHtml, escapeAttr, sectionHead, renderUserList, bindUserLinks, bindCardEvents }=ctx
+  const { state, endpoints, apiGet, apiPost, pickResults, escapeHtml, escapeAttr, sectionHead, renderUserList, renderVideosGrid, renderImagesMasonry, bindUserLinks, bindCardEvents }=ctx
   const host=document.getElementById('profilePaneBody')
   if(!host)return
   
@@ -184,6 +186,24 @@ async function renderProfilePane(ctx,{token}={}){
         return `<div class="${baseCls}"><div class="fav">${read?'':'●'}</div><div class="fbody"><div class="ftitle">${escapeHtml(title)} <span style="opacity:.6;font-weight:500">${time}</span></div><div class="fsub">${sub||escapeHtml(JSON.stringify(n).slice(0,120))}</div></div><div class="fright"></div></div>`
       })
       host.innerHTML=`${sectionHead('通知',data?.count??rows.length,'')}${items.length?`<div class="flist">${items.join('')}</div>`:`<div class="detail-loading">暂无通知</div>`}`
+      bindUserLinks(host)
+      bindCardEvents(host)
+      return
+    }
+
+    if(tab==='点赞'||tab.toLowerCase()==='likes'){
+      const [videosRes,imagesRes]=await Promise.all([
+        apiGet(endpoints.favoriteVideos(),{page:0,limit:24},{skipAuthWait:true,silent:true}),
+        apiGet(endpoints.favoriteImages(),{page:0,limit:24},{skipAuthWait:true,silent:true}),
+      ])
+      if(videosRes?.error&&imagesRes?.error){
+        throw new Error(videosRes.message||imagesRes.message||'request failed')
+      }
+      const videos=videosRes?.error?[]:pickResults(videosRes)
+      const images=imagesRes?.error?[]:pickResults(imagesRes)
+      const videosHtml=videos.length?renderVideosGrid(videos):`<div class="detail-loading">暂无点赞视频</div>`
+      const imagesHtml=images.length?renderImagesMasonry(images):`<div class="detail-loading">暂无点赞图片</div>`
+      host.innerHTML=`${sectionHead('点赞视频',videosRes?.count??videos.length,'')}${videosHtml}${sectionHead('点赞图片',imagesRes?.count??images.length,'')}${imagesHtml}`
       bindUserLinks(host)
       bindCardEvents(host)
       return
@@ -288,7 +308,7 @@ async function loadAndRenderConversation(ctx,panel,convId,{reset}){
       const uid=u?.id||''
       const name=escapeHtml(String(u?.name||u?.username||'User'))
       const time=escapeHtml(String(m?.createdAt||m?.created_at||'').replace('T',' ').slice(0,16))
-      const body=escapeHtml(String(m?.body||''))
+      const body=linkifyText(String(m?.body||''),{escapeHtml,escapeAttr})
       const userLink=uid?`<span class="ulink" data-user-id="${escapeAttr(uid)}">${name}</span>`:name
       return `<div style="padding:10px 0;border-top:1px solid var(--b0)"><div style="font-size:12px;opacity:.8">${userLink} <span style="opacity:.7">${time}</span></div><div style="margin-top:6px;white-space:pre-wrap;line-height:1.45">${body||'—'}</div></div>`
     }).join('')

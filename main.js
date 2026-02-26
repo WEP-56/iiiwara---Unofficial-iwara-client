@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session, net: electronNet, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, session, net: electronNet, dialog, shell } = require("electron");
 let autoUpdater = null;
 const path = require("path");
 const fs = require("fs");
@@ -21,7 +21,12 @@ const updateState = {
   newVersion: null,
   progress: null,
   error: null,
+  manualDownloadUrl: null,
+  manualReleaseUrl: null,
 };
+
+const UPDATE_REPO_OWNER = "WEP-56";
+const UPDATE_REPO_NAME = "iiiwara---Unofficial-iwara-client";
 
 const API_BASE_URL = "https://apiq.iwara.tv";
 const IWARA_BASE_URL = "https://www.iwara.tv";
@@ -549,6 +554,99 @@ function createWindow() {
   });
 }
 
+function normalizeVersionTag(v) {
+  return String(v || "").trim().replace(/^v/i, "");
+}
+
+function compareSemver(a, b) {
+  const pa = normalizeVersionTag(a).split(".").map((x) => parseInt(x, 10) || 0);
+  const pb = normalizeVersionTag(b).split(".").map((x) => parseInt(x, 10) || 0);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const va = pa[i] || 0;
+    const vb = pb[i] || 0;
+    if (va > vb) return 1;
+    if (va < vb) return -1;
+  }
+  return 0;
+}
+
+function pickManualAssetUrl(release) {
+  const assets = Array.isArray(release?.assets) ? release.assets : [];
+  const names = [".exe", ".msi", ".zip", ".7z", ".nupkg"];
+  for (const ext of names) {
+    const hit = assets.find((a) => String(a?.name || "").toLowerCase().includes(ext));
+    if (hit?.browser_download_url) return String(hit.browser_download_url);
+  }
+  const first = assets[0];
+  return first?.browser_download_url ? String(first.browser_download_url) : null;
+}
+
+function requestPublicJson(url) {
+  return new Promise((resolve) => {
+    let request;
+    let settled = false;
+    let timer;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(result);
+    };
+    request = electronNet.request({
+      method: "GET",
+      url,
+      session: iwaraSession,
+      useSessionCookies: false,
+    });
+    timer = setTimeout(() => {
+      try { request.abort(); } catch {}
+      finish({ status: 0, json: null, text: "timeout" });
+    }, 15000);
+    request.setHeader("Accept", "application/vnd.github+json");
+    request.setHeader("User-Agent", `iiiwara/${app.getVersion()}`);
+    let data = "";
+    request.on("response", (response) => {
+      response.on("data", (chunk) => (data += chunk));
+      response.on("end", () => {
+        finish({ status: response.statusCode || 0, json: safeJsonParse(data), text: data });
+      });
+      response.on("error", (err) => {
+        finish({ status: response.statusCode || 0, json: null, text: String(err && err.message ? err.message : err) });
+      });
+    });
+    request.on("error", (err) => {
+      finish({ status: 0, json: null, text: String(err && err.message ? err.message : err) });
+    });
+    request.end();
+  });
+}
+
+async function checkGithubReleaseFallback() {
+  try {
+    const api = `https://api.github.com/repos/${UPDATE_REPO_OWNER}/${UPDATE_REPO_NAME}/releases/latest`;
+    const res = await requestPublicJson(api);
+    if (res.status < 200 || res.status >= 300 || !res.json) {
+      return { ok: false, error: `GitHub API failed (${res.status})` };
+    }
+    const latestTag = normalizeVersionTag(res.json.tag_name || res.json.name || "");
+    const current = normalizeVersionTag(app.getVersion());
+    if (!latestTag) return { ok: false, error: "No release version found" };
+    const hasUpdate = compareSemver(latestTag, current) > 0;
+    const releaseUrl = typeof res.json.html_url === "string" ? res.json.html_url : `https://github.com/${UPDATE_REPO_OWNER}/${UPDATE_REPO_NAME}/releases`;
+    const downloadUrl = hasUpdate ? pickManualAssetUrl(res.json) : null;
+    return {
+      ok: true,
+      hasUpdate,
+      latestVersion: latestTag,
+      releaseUrl,
+      downloadUrl,
+    };
+  } catch (e) {
+    return { ok: false, error: String(e && e.message ? e.message : e) };
+  }
+}
+
 function initAutoUpdate() {
   if (!app.isPackaged) return;
   try {
@@ -566,6 +664,8 @@ function initAutoUpdate() {
   updateState.downloaded = false;
   updateState.newVersion = null;
   updateState.progress = null;
+  updateState.manualDownloadUrl = null;
+  updateState.manualReleaseUrl = null;
 
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
@@ -601,6 +701,8 @@ function initAutoUpdate() {
     updateState.error = null;
     updateState.newVersion = null;
     updateState.progress = null;
+    updateState.manualDownloadUrl = null;
+    updateState.manualReleaseUrl = null;
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send("update-state", { ...updateState });
     }
@@ -760,26 +862,40 @@ ipcMain.handle("update-get-state", async () => {
 });
 
 ipcMain.handle("update-check", async () => {
-  if (!app.isPackaged || !autoUpdater) {
-    updateState.supported = false;
-    updateState.checking = false;
-    updateState.error = "仅打包版本支持自动更新";
-    try {
-      updateState.currentVersion = app.getVersion();
-    } catch {}
-    return { ...updateState };
-  }
-  updateState.supported = true;
+  updateState.supported = !!(app.isPackaged && autoUpdater);
+  updateState.checking = true;
   updateState.error = null;
+  updateState.manualDownloadUrl = null;
+  updateState.manualReleaseUrl = null;
   try {
     updateState.currentVersion = app.getVersion();
   } catch {}
-  try {
-    await autoUpdater.checkForUpdates();
-  } catch (e) {
+  if (app.isPackaged && autoUpdater) {
+    try {
+      await autoUpdater.checkForUpdates();
+    } catch (e) {
+      updateState.checking = false;
+      updateState.error = e && e.message ? e.message : String(e);
+    }
+  } else {
     updateState.checking = false;
-    updateState.error = e && e.message ? e.message : String(e);
   }
+
+  if (!updateState.available && !updateState.downloaded) {
+    const fallback = await checkGithubReleaseFallback();
+    if (fallback.ok) {
+      updateState.newVersion = fallback.latestVersion || updateState.newVersion;
+      updateState.manualReleaseUrl = fallback.releaseUrl || null;
+      updateState.manualDownloadUrl = fallback.downloadUrl || null;
+      updateState.available = !!fallback.hasUpdate;
+      updateState.error = fallback.hasUpdate
+        ? null
+        : (updateState.error || "已是最新版本");
+    } else if (!updateState.error) {
+      updateState.error = fallback.error || "更新检查失败";
+    }
+  }
+  updateState.checking = false;
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send("update-state", { ...updateState });
   }
@@ -787,6 +903,15 @@ ipcMain.handle("update-check", async () => {
 });
 
 ipcMain.handle("update-install", async () => {
+  if (updateState.manualDownloadUrl || updateState.manualReleaseUrl) {
+    const target = updateState.manualDownloadUrl || updateState.manualReleaseUrl;
+    try {
+      await shell.openExternal(String(target));
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, message: e && e.message ? e.message : String(e) };
+    }
+  }
   if (!app.isPackaged || !autoUpdater) {
     return { ok: false, message: "仅打包版本支持自动更新" };
   }
@@ -1028,6 +1153,19 @@ ipcMain.on("set-hardware-acceleration", (event, isOn) => {
 ipcMain.handle("set-auto-start", async (event, isOn) => {
   try {
     app.setLoginItemSettings({ openAtLogin: !!isOn });
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: String(e && e.message ? e.message : e) };
+  }
+});
+
+ipcMain.handle("open-external-url", async (event, rawUrl) => {
+  try {
+    const u = new URL(String(rawUrl || ""));
+    if (u.protocol !== "http:" && u.protocol !== "https:") {
+      return { success: false, error: "Unsupported URL protocol" };
+    }
+    await shell.openExternal(u.toString());
     return { success: true };
   } catch (e) {
     return { success: false, error: String(e && e.message ? e.message : e) };

@@ -1,3 +1,5 @@
+import { linkifyText } from '../utils/linkify.js'
+
 export async function renderVideoDetailPage(ctx){
   const content=document.getElementById('content')
   if(!content)return
@@ -26,14 +28,14 @@ function videoDetailPanelHtml(ctx){
   const liked=!!v?.liked
   const following=!!v?.user?.following
   const stats=`${liked?'♥':'♡'} ${formatNumber(v?.numLikes||v?.num_likes||0)} · ▶ ${formatNumber(v?.numViews||v?.num_views||0)} · 💬 ${formatNumber(v?.numComments||v?.num_comments||0)}`
-  const bodyText=escapeHtml(v?.body||'')
+  const bodyText=linkifyText(v?.body||'',{escapeHtml,escapeAttr})
   const sources=Array.isArray(state.view.sources)?state.view.sources:[]
   const cur=escapeAttr(String(state.view.sourceUrl||''))
   const selectHtml=sources.length?`<div class="detail-bar"><select class="detail-select" id="watchVideoQuality">${sources.map((s)=>{const q=sourceQualityNum(s);const label=q?`${q}p`:'源';const url=escapeAttr(normalizeUrl(sourcePlayUrl(s)));return`<option value="${url}"${url===cur?' selected':''}>${escapeHtml(label)}</option>`}).join('')}</select>${cur?`<a class="detail-link" href="${cur}" target="_blank" rel="noreferrer">打开链接</a>`:''}</div>`:''
   const likeTitle=liked?'取消点赞':'点赞'
   const followTitle=following?'取消订阅':'订阅'
   const actions=`<div class="detail-actions">${authorId?`<div class="detail-btn" id="watchFollowBtn" title="${escapeAttr(followTitle)}">${following?'✓':'+'}</div>`:''}<div class="detail-btn" id="watchLikeBtn" title="${escapeAttr(likeTitle)}">${liked?'♥':'♡'}</div></div>`
-  return `<div class="detail-meta"><div class="detail-sub">${authorId?`<span class="ulink" data-user-id="${authorId}">${authorName}</span>`:authorName}${created?` · ${created}`:''}</div><div class="detail-sub" style="margin-top:4px;display:flex;align-items:center;gap:10px"><div style="flex:1">${escapeHtml(stats)}</div>${actions}</div></div><div class="vtitle" style="margin:0 0 8px 0">${title}</div>${bodyText?`<div class="detail-desc">${bodyText.replace(/\\n/g,'<br>')}</div>`:''}${selectHtml}`
+  return `<div class="detail-meta"><div class="detail-sub">${authorId?`<span class="ulink" data-user-id="${authorId}">${authorName}</span>`:authorName}${created?` · ${created}`:''}</div><div class="detail-sub" style="margin-top:4px;display:flex;align-items:center;gap:10px"><div style="flex:1">${escapeHtml(stats)}</div>${actions}</div></div><div class="vtitle" style="margin:0 0 8px 0">${title}</div>${bodyText?`<div class="detail-desc">${bodyText}</div>`:''}${selectHtml}`
 }
 
 function renderVideoDetailMedia(ctx){

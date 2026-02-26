@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // 应用设置
   clearCache: async () => ipcRenderer.invoke("clear-cache"),
   selectDownloadPath: async () => ipcRenderer.invoke("select-download-path"),
+  openExternalUrl: async (url) => ipcRenderer.invoke("open-external-url", url),
   
   // 发送 Token 到主进程
   setApiToken: token => ipcRenderer.send("set-api-token", token),

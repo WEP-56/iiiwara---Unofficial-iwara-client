@@ -11,6 +11,8 @@ export const endpoints={
   userNotifications:(userId)=>`/user/${encodeURIComponent(String(userId||''))}/notifications`,
   userConversations:(userId)=>`/user/${encodeURIComponent(String(userId||''))}/conversations`,
   conversationMessages:(conversationId)=>`/conversation/${encodeURIComponent(String(conversationId||''))}/messages`,
+  favoriteVideos:()=>'/favorites/videos',
+  favoriteImages:()=>'/favorites/images',
 
   videos:()=>'/videos',
   images:()=>'/images',

@@ -1,3 +1,5 @@
+import { linkifyText } from '../utils/linkify.js'
+
 export async function renderImageDetailPage(ctx){
   const content=document.getElementById('content')
   if(!content)return
@@ -63,11 +65,11 @@ function imageDetailPanelHtml(ctx){
   const liked=!!img?.liked
   const following=!!img?.user?.following
   const stats=`${liked?'♥':'♡'} ${formatNumber(img?.numLikes||img?.num_likes||0)} · 💬 ${formatNumber(img?.numComments||img?.num_comments||0)} · ${formatNumber(files.length)}p`
-  const bodyText=escapeHtml(img?.body||img?.description||'')
+  const bodyText=linkifyText(img?.body||img?.description||'',{escapeHtml,escapeAttr})
   const likeTitle=liked?'取消点赞':'点赞'
   const followTitle=following?'取消订阅':'订阅'
   const actions=`<div class="detail-actions">${authorId?`<div class="detail-btn" id="watchFollowBtn" title="${escapeAttr(followTitle)}">${following?'✓':'+'}</div>`:''}<div class="detail-btn" id="watchLikeBtn" title="${escapeAttr(likeTitle)}">${liked?'♥':'♡'}</div></div>`
-  return `<div class="detail-meta"><div class="detail-sub">${authorId?`<span class="ulink" data-user-id="${authorId}">${authorName||'Unknown'}</span>`:escapeHtml(authorName||'Unknown')}${created?` · ${created}`:''}</div><div class="detail-sub" style="margin-top:4px;display:flex;align-items:center;gap:10px"><div style="flex:1">${escapeHtml(stats)}</div>${actions}</div></div><div class="vtitle" style="margin:0 0 8px 0">${title}</div>${bodyText?`<div class="detail-desc">${bodyText.replace(/\\n/g,'<br>')}</div>`:''}`
+  return `<div class="detail-meta"><div class="detail-sub">${authorId?`<span class="ulink" data-user-id="${authorId}">${authorName||'Unknown'}</span>`:escapeHtml(authorName||'Unknown')}${created?` · ${created}`:''}</div><div class="detail-sub" style="margin-top:4px;display:flex;align-items:center;gap:10px"><div style="flex:1">${escapeHtml(stats)}</div>${actions}</div></div><div class="vtitle" style="margin:0 0 8px 0">${title}</div>${bodyText?`<div class="detail-desc">${bodyText}</div>`:''}`
 }
 
 function renderImageDetailMedia(ctx){
