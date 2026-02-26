@@ -5,9 +5,12 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src * data: blob:; media-src *; connect-src *;">
   <title>iwara</title>
   <link rel="stylesheet" href="styles.css">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&family=Saira+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles-glass.css">
+  <script src="./lib/liquid-core.min.js"></script>
+  <script>window.LiquidWeb = LiquidWeb;</script>
 </head>
 <body>
+  <div id="app-bg"></div>
   <div class="app">
     <div class="titlebar">
       <div class="traf">
@@ -91,7 +94,7 @@
     </div>
   </div>
 
-  <div class="rat-panel" id="ratPanel">
+  <div class="rat-panel" id="ratPanel" data-glass="modal">
     <div class="rat-title">评级过滤</div>
     <div class="rat-row">
       <div class="rat-lbl"><div class="rat-dot" style="background:#4ade80"></div>General</div>
@@ -108,7 +111,7 @@
     <div class="rat-note">全局生效，将影响列表请求。</div>
   </div>
 
-  <div class="upd-panel" id="updPanel">
+  <div class="upd-panel" id="updPanel" data-glass="modal">
     <div class="upd-title">更新</div>
     <div class="upd-row"><span class="upd-k">当前版本</span><span class="upd-v" id="updCurVer">—</span></div>
     <div class="upd-row"><span class="upd-k">最新版本</span><span class="upd-v" id="updNewVer">—</span></div>
@@ -119,6 +122,9 @@
     </div>
   </div>
 
+  <script src="./lib/liquid-core.min.js"></script>
+  <script>window.LiquidWeb = LiquidWeb;</script>
+  <script src="./lib/glass-manager.js"></script>
   <script type="module" src="renderer.js"></script>
 </body>
 </html>

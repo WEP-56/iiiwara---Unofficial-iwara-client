@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   setAlwaysOnTop: isOn => ipcRenderer.send("set-always-on-top", isOn),
   setHardwareAcceleration: isOn => ipcRenderer.send("set-hardware-acceleration", isOn),
   setAutoStart: isOn => ipcRenderer.invoke("set-auto-start", isOn),
+  setDevToolsShortcut: isOn => ipcRenderer.send("set-dev-tools-shortcut", isOn),
   
   // 界面缩放
   setZoomFactor: factor => {

@@ -1,0 +1,125 @@
+body[data-glass="on"] {
+  --glass-bg-opacity: 0.50;
+  --glass-bg-blur: 32px;
+  --glass-surface-opacity: 0.12;
+  --glass-border-opacity: 0.20;
+  --glass-highlight: hsla(0, 0%, 100%, 0.15);
+  --glass-shadow: 0 8px 32px hsla(0, 0%, 0%, 0.36), 0 1px 0 var(--glass-highlight) inset;
+}
+body[data-glass="on"],
+body[data-glass="on"] html {
+  background: var(--bg-1) !important;
+}
+#app-bg {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  backdrop-filter: blur(var(--glass-bg-blur, 28px)) saturate(1.45);
+  -webkit-backdrop-filter: blur(var(--glass-bg-blur, 28px)) saturate(1.45);
+  transition: background 0.4s ease, opacity 0.4s ease;
+}
+body[data-glass="on"] #app-bg {
+  display: block;
+}
+body[data-glass="on"] .app {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
+  border-radius: 12px;
+}
+body:not([data-glass="on"]) {
+  background: var(--bg-1, #0d1117);
+}
+body[data-glass="on"] .titlebar,
+body[data-glass="on"] .topbar {
+  background: hsla(0, 0%, 100%, 0.04) !important;
+  border-bottom-color: hsla(0, 0%, 100%, 0.07) !important;
+}
+body[data-glass="on"] .sidebar {
+  background: hsla(0, 0%, 0%, 0.18) !important;
+  border-right-color: hsla(0, 0%, 100%, 0.06) !important;
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+}
+body[data-glass="on"] .card,
+body[data-glass="on"] .vcard,
+body[data-glass="on"] .icard {
+  background: hsla(0, 0%, 100%, var(--glass-surface-opacity, 0.08)) !important;
+  border-color: hsla(0, 0%, 100%, var(--glass-border-opacity, 0.18)) !important;
+  box-shadow: var(--glass-shadow) !important;
+  backdrop-filter: blur(10px) saturate(1.25);
+  -webkit-backdrop-filter: blur(10px) saturate(1.25);
+}
+body[data-glass="on"] .card:hover,
+body[data-glass="on"] .vcard:hover,
+body[data-glass="on"] .icard:hover {
+  background: hsla(0, 0%, 100%, 0.13) !important;
+  border-color: hsla(0, 0%, 100%, 0.26) !important;
+}
+body[data-glass="on"] .search-box {
+  background: hsla(0, 0%, 100%, 0.06) !important;
+  border-color: hsla(0, 0%, 100%, 0.14) !important;
+}
+body[data-glass="on"] .search-box:focus-within {
+  background: hsla(0, 0%, 100%, 0.10) !important;
+  border-color: var(--ac-bd) !important;
+}
+body[data-glass="on"] .ico-btn {
+  background: hsla(0, 0%, 100%, 0.05) !important;
+  border-color: hsla(0, 0%, 100%, 0.14) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+body[data-glass="on"] .ico-btn:hover {
+  background: hsla(0, 0%, 100%, 0.12) !important;
+  border-color: hsla(0, 0%, 100%, 0.24) !important;
+}
+body[data-glass="on"] .rat-panel,
+body[data-glass="on"] .upd-panel,
+body[data-glass="on"] .ext-confirm-card {
+  background: hsla(0, 0%, 6%, 0.78) !important;
+  border: 1px solid hsla(0, 0%, 100%, 0.13) !important;
+  backdrop-filter: blur(32px) saturate(1.5);
+  -webkit-backdrop-filter: blur(32px) saturate(1.5);
+  box-shadow: 0 24px 80px hsla(0, 0%, 0%, 0.45) !important;
+}
+body[data-glass="on"] .statusbar {
+  background: hsla(0, 0%, 0%, 0.20) !important;
+  border-top-color: hsla(0, 0%, 100%, 0.05) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+body[data-glass="on"] .watch-right {
+  background: hsla(0, 0%, 4%, 0.60) !important;
+  backdrop-filter: blur(24px) saturate(1.35);
+  -webkit-backdrop-filter: blur(24px) saturate(1.35);
+}
+body[data-glass="on"] .back-to-top,
+body[data-glass="on"] .sb-tog {
+  background: hsla(0, 0%, 100%, 0.07) !important;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+body[data-glass="on"] .floor-card {
+  background: hsla(0, 0%, 100%, 0.04) !important;
+  border-color: hsla(0, 0%, 100%, 0.09) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+body[data-glass="on"] .floor:hover .floor-card {
+  background: hsla(0, 0%, 100%, 0.08) !important;
+  border-color: hsla(0, 0%, 100%, 0.15) !important;
+}
+body[data-glass="on"] .card-title,
+body[data-glass="on"] .vtitle,
+body[data-glass="on"] .ititle,
+body[data-glass="on"] .sh-t {
+  text-shadow: 0 1px 6px hsla(0, 0%, 0%, 0.55);
+}
+body[data-glass="on"] [data-liquid-svg] {
+  position: absolute !important;
+  pointer-events: none !important;
+  overflow: visible !important;
+}

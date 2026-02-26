@@ -1,11 +1,11 @@
 :root{--bg-0:#07090d;--bg-1:#0d1117;--bg-2:#161b22;--bg-3:#21262d;--b0:rgba(103,183,255,.08);--b1:rgba(103,183,255,.15);--b2:rgba(255,255,255,.16);--t0:#e6edf3;--t1:#8b949e;--t2:#6e7681;--t3:rgba(255,255,255,.16);--ac:#67b7ff;--ac-dim:rgba(103,183,255,.11);--ac-bd:rgba(103,183,255,.26);--glow-1:rgba(103,183,255,.14);--glow-2:rgba(122,92,255,.10);--gradient:linear-gradient(135deg, rgba(103,183,255,.05) 0%, rgba(122,92,255,.03) 100%);--g-bg:rgba(9,11,16,.72);--blur:blur(18px) saturate(165%);--r:10px;--r-sm:7px;--r-lg:14px;--sh:0 18px 60px rgba(0,0,0,.55);--sb:210px;--sb-c:54px;--tb:32px;--font-ui:'IBM Plex Sans','Noto Sans SC',sans-serif;--font-display:'Saira Semi Condensed','Noto Sans SC',sans-serif;--font-mono:'DM Mono',monospace;--dur-1:.12s;--dur-2:.20s;--dur-3:.32s;--ease-in:cubic-bezier(.2,.8,.2,1);--ease-out:cubic-bezier(.4,0,.2,1);color-scheme:dark}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font-ui);font-size:13px;line-height:1.55;background:var(--bg-1);color:var(--t0);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font-ui);font-size:13px;line-height:1.55;background:var(--bg-1);color:var(--t0);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;border-radius:12px;overflow:hidden}
 body::before{content:'';position:fixed;inset:-120px;pointer-events:none;z-index:-2;background:radial-gradient(900px 540px at 18% -12%,var(--glow-1),transparent 62%),radial-gradient(880px 620px at 115% 8%,var(--glow-2),transparent 58%),radial-gradient(760px 520px at 50% 120%,rgba(255,255,255,.05),transparent 60%),var(--gradient),linear-gradient(180deg,var(--bg-0) 0%,var(--bg-1) 44%,var(--bg-0) 100%)}
 body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.10;mix-blend-mode:overlay;background-image:repeating-linear-gradient(0deg,rgba(255,255,255,.028) 0 1px,transparent 1px 4px),repeating-linear-gradient(90deg,rgba(255,255,255,.018) 0 1px,transparent 1px 6px)}
 button,input,select,textarea{font:inherit}
 :focus-visible{outline:none;box-shadow:0 0 0 3px var(--ac-dim)}
-.app{display:flex;flex-direction:column;height:100vh;width:100vw;overflow:hidden}
+.app{display:flex;flex-direction:column;height:100vh;width:100vw;overflow:hidden;border-radius:12px;overflow:hidden}
 .app.immersive .sidebar{width:0}
 .app.immersive .sb-tog{display:none}
 .app.immersive #subarea{display:none}

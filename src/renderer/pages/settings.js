@@ -20,6 +20,82 @@ export async function renderSettingsPage(ctx){
     </div>
     ${createSelectItem('uiScale','界面缩放比例',['100%','125%','150%'],saved.uiScale||'100%')}
     ${createSelectItem('sidebarDefault','侧边栏默认状态',['展开','收起'],saved.sidebarDefault||'展开')}
+    <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--b0)">
+      <div class="sh" style="margin-bottom:8px">
+        <div class="sh-t" style="font-size:12px">液态玻璃主题</div>
+      </div>
+      ${createToggleItem('liquidGlass','启用液态玻璃主题',!!saved.liquidGlass)}
+      <div id="glassOptions" style="margin-top:4px;${!saved.liquidGlass?'opacity:0.4;pointer-events:none' : ''}">
+        ${createSelectItem('glassMode','折射模式',
+          ['standard', 'polar', 'prominent', 'shader'],
+          saved.glassMode || 'standard')}
+        <div class="fitem" style="margin-bottom:2px">
+          <div class="fbody">
+            <div class="ftitle">折射强度</div>
+            <div class="fsub">位移幅度（10~40，默认 14）</div>
+          </div>
+          <input type="range" id="glassScale"
+            min="4" max="40" step="1"
+            value="${saved.glassScale || 14}"
+            style="width:100px;accent-color:var(--ac)">
+          <span id="glassScaleVal" style="font-size:11px;color:var(--t2);margin-left:6px;min-width:22px;text-align:right">
+            ${saved.glassScale || 14}
+          </span>
+        </div>
+        <div class="fitem" style="margin-bottom:2px">
+          <div class="fbody">
+            <div class="ftitle">模糊半径</div>
+            <div class="fsub">背景模糊（1~6px，默认 2）</div>
+          </div>
+          <input type="range" id="glassBlur"
+            min="0.5" max="6" step="0.5"
+            value="${saved.glassBlur || 2}"
+            style="width:100px;accent-color:var(--ac)">
+          <span id="glassBlurVal" style="font-size:11px;color:var(--t2);margin-left:6px;min-width:28px;text-align:right">
+            ${saved.glassBlur || 2}px
+          </span>
+        </div>
+        <div class="fitem" style="margin-bottom:2px">
+          <div class="fbody">
+            <div class="ftitle">饱和度</div>
+            <div class="fsub">色彩鲜艳程度（130~200，默认 155）</div>
+          </div>
+          <input type="range" id="glassSaturation"
+            min="100" max="220" step="5"
+            value="${saved.glassSaturation || 155}"
+            style="width:100px;accent-color:var(--ac)">
+          <span id="glassSaturationVal" style="font-size:11px;color:var(--t2);margin-left:6px;min-width:28px;text-align:right">
+            ${saved.glassSaturation || 155}
+          </span>
+        </div>
+        <div class="fitem" style="margin-bottom:2px">
+          <div class="fbody">
+            <div class="ftitle">色差</div>
+            <div class="fsub">边缘色彩分离（0~80，0 为关闭）</div>
+          </div>
+          <input type="range" id="glassAberration"
+            min="0" max="80" step="5"
+            value="${saved.glassAberration || 25}"
+            style="width:100px;accent-color:var(--ac)">
+          <span id="glassAberrationVal" style="font-size:11px;color:var(--t2);margin-left:6px;min-width:22px;text-align:right">
+            ${saved.glassAberration || 25}
+          </span>
+        </div>
+        <div class="fitem" style="margin-bottom:2px">
+          <div class="fbody">
+            <div class="ftitle">背景透明度</div>
+            <div class="fsub">磨砂层深浅（0.15~0.55，默认 0.30）</div>
+          </div>
+          <input type="range" id="glassBgOpacity"
+            min="0.10" max="0.55" step="0.05"
+            value="${saved.glassBgOpacity || 0.30}"
+            style="width:100px;accent-color:var(--ac)">
+          <span id="glassBgOpacityVal" style="font-size:11px;color:var(--t2);margin-left:6px;min-width:28px;text-align:right">
+            ${Math.round((saved.glassBgOpacity || 0.30) * 100)}%
+          </span>
+        </div>
+      </div>
+    </div>
   `
 
   // ==================== 2. 内容过滤 ====================
@@ -76,16 +152,16 @@ export async function renderSettingsPage(ctx){
       <div class="fbody"><div class="ftitle">下载保存路径</div><div class="fsub">${saved.downloadPath||'点击选择路径'}</div></div>
       <div class="fright">选择 ›</div>
     </div>
-    ${createToggleItem('borderless','无边框窗口',!!saved.borderless)}
-    ${createToggleItem('blur','毛玻璃效果',saved.blur!==false)}
-    ${createToggleItem('topmost','始终置顶',!!saved.topmost)}
     ${createToggleItem('muteStart','默认静音启动',!!saved.muteStart)}
   `
 
   // ==================== 7. 实验性功能 ====================
   const experimentalHtml=`
     <div class="sh"><div class="sh-t">实验性功能</div></div>
-    ${createToggleItem('devToolsShortcut','启用开发者工具快捷键',!!saved.devToolsShortcut)}
+    <div class="fitem" style="margin-bottom:2px">
+      <div class="fbody"><div class="ftitle">启用开发者工具快捷键</div><div class="fsub">Ctrl+Shift+I 打开开发者工具</div></div>
+      <div class="toggle ${saved.devToolsShortcut?'on':''}" data-setting-id="devToolsShortcut"></div>
+    </div>
   `
 
   // ==================== 快捷键配置 ====================
@@ -418,18 +494,64 @@ function bindSettingsEvents(ctx){
         localStorage.setItem('iwara_settings',JSON.stringify(saved))
         
         // 某些设置需要立即生效
-        if(id==='topmost'){
-          window.electronAPI?.setAlwaysOnTop?.(isOn)
-        }else if(id==='hwaccel'){
+        if(id==='hwaccel'){
           window.electronAPI?.setHardwareAcceleration?.(isOn)
         }else if(id==='autoStart'){
           window.electronAPI?.setAutoStart?.(isOn)
-        }else if(id==='blur'){
-          document.body.classList.toggle('blur',isOn)
+        }else if(id==='liquidGlass'){
+          const glassOptions=document.getElementById('glassOptions')
+          if(glassOptions){
+            glassOptions.style.opacity=isOn?'1':'0.4'
+            glassOptions.style.pointerEvents=isOn?'':'none'
+          }
+          if(window.applyGlassTheme)window.applyGlassTheme(isOn)
+        }else if(id==='devToolsShortcut'){
+          window.electronAPI?.setDevToolsShortcut?.(isOn)
         }
       }catch{}
     })
   })
+
+  // glass 折射模式
+  document.getElementById('glassMode')?.addEventListener('change', (e) => {
+    _saveAndUpdateGlass('glassMode', e.target.value, { mode: e.target.value })
+  })
+
+  // glass 滑块：统一处理
+  const sliderDefs = [
+    { id: 'glassScale',      valId: 'glassScaleVal',      cfg: 'scale',      fmt: v => v },
+    { id: 'glassBlur',       valId: 'glassBlurVal',        cfg: 'blur',       fmt: v => v + 'px' },
+    { id: 'glassSaturation', valId: 'glassSaturationVal',  cfg: 'saturation', fmt: v => v },
+    { id: 'glassAberration', valId: 'glassAberrationVal', cfg: 'aberration', fmt: v => v },
+    { id: 'glassBgOpacity',  valId: 'glassBgOpacityVal',  cfg: 'bgOpacity',  fmt: v => Math.round(v * 100) + '%' },
+  ]
+  sliderDefs.forEach(({ id, valId, cfg, fmt }) => {
+    const slider = document.getElementById(id)
+    const valEl  = document.getElementById(valId)
+    if (!slider) return
+    slider.addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value)
+      if (valEl) valEl.textContent = fmt(v)
+      if (window.GlassManagerUpdateConfig) {
+        window.GlassManagerUpdateConfig({ [cfg]: v })
+      }
+    })
+    slider.addEventListener('change', (e) => {
+      const v = parseFloat(e.target.value)
+      _saveAndUpdateGlass(id, v, { [cfg]: v })
+    })
+  })
+
+  function _saveAndUpdateGlass(key, value, configPatch) {
+    try {
+      const saved = JSON.parse(localStorage.getItem('iwara_settings') || '{}')
+      saved[key] = value
+      localStorage.setItem('iwara_settings', JSON.stringify(saved))
+    } catch {}
+    if (window.GlassManagerUpdateConfig && configPatch) {
+      window.GlassManagerUpdateConfig(configPatch)
+    }
+  }
 
   // 选择型设置项逻辑
   const selectIds=['uiScale','sidebarDefault','defaultGrade','defaultSort','perPageCount','videoQuality','imageViewerZoom','proxyMode','requestTimeout','concurrentLimit']

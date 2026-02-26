@@ -13,6 +13,13 @@ import { formatDurationSeconds, formatNumber, pad2 } from './utils/format.js'
 import { sha1Hex } from './utils/crypto.js'
 const playIcon=`<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`
 
+function toggleWatchSidebar(btn){
+  const right=document.querySelector('.watch-right')
+  if(!right)return
+  const isCollapsed=right.classList.toggle('collapsed')
+  if(btn)btn.textContent=isCollapsed?'‹':'›'
+}
+
 window.addEventListener('error',(e)=>{try{console.error('window.error',e?.message||e,e?.filename||'',e?.lineno||0,e?.colno||0,e?.error||'')}catch{}})
 window.addEventListener('unhandledrejection',(e)=>{try{console.error('unhandledrejection',e?.reason||e)}catch{}})
 
@@ -128,7 +135,34 @@ function applyPalette(paletteKey){
     btn.title=`配色：${p.label}`
   }
   saveSetting('palette',p.key)
+  if (window.GlassManager?.active) {
+    window.GlassManager.onPaletteChange(p.key)
+  }
 }
+
+function applyGlassTheme(on, config) {
+  if (!window.GlassManager) return
+  if (on) {
+    let saved = {}
+    try { saved = JSON.parse(localStorage.getItem('iwara_settings') || '{}') } catch {}
+    const glassConfig = {
+      scale:      Number(saved.glassScale)      || 14,
+      blur:       Number(saved.glassBlur)       || 2,
+      saturation: Number(saved.glassSaturation) || 155,
+      aberration: Number(saved.glassAberration) || 25,
+      bgOpacity:  Number(saved.glassBgOpacity)  || 0.50,
+      mode:       saved.glassMode               || 'standard',
+      ...(config || {}),
+    }
+    GlassManager.enable(state.palette, glassConfig)
+    saveSetting('liquidGlass', true)
+  } else {
+    GlassManager.disable()
+    saveSetting('liquidGlass', false)
+  }
+}
+window.applyGlassTheme = applyGlassTheme
+window.GlassManagerUpdateConfig = (cfg) => window.GlassManager?.updateConfig(cfg)
 
 function saveSetting(key,val){
   try{
@@ -352,6 +386,13 @@ function loadSettings(){
     if(settings.uiScale){
       const scale=parseFloat(settings.uiScale)/100
       window.electronAPI?.setZoomFactor?.(scale)
+    }
+    
+    // 加载 glass 主题
+    if (settings.liquidGlass) {
+      requestAnimationFrame(() => {
+        setTimeout(() => applyGlassTheme(true), 100)
+      })
     }
     
     // 更多设置可以在此加载
@@ -1171,6 +1212,11 @@ async function renderPageInitial(){
   }
   content.innerHTML=pageContainerHtml(`<div class="create-page" style="padding:30px 0"><div class="create-icon" style="font-size:28px">○</div><div class="create-sub">加载中…</div></div>`)
   await fetchAndRenderAppend(true,token)
+  requestAnimationFrame(() => {
+    if (window.GlassManager?.active) {
+      window.GlassManager.mountNewCards(document.getElementById('content'))
+    }
+  })
 }
 
 async function fetchAndRenderAppend(reset,token=state.navToken){
@@ -1205,6 +1251,11 @@ async function fetchAndRenderAppend(reset,token=state.navToken){
     }
   }finally{
     setLoading(false)
+    requestAnimationFrame(() => {
+      if (window.GlassManager?.active) {
+        window.GlassManager.mountNewCards(document.getElementById('content'))
+      }
+    })
   }
 }
 

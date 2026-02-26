@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session, net: electronNet, dialog, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, session, net: electronNet, dialog, shell, globalShortcut } = require("electron");
 let autoUpdater = null;
 const path = require("path");
 const fs = require("fs");
@@ -502,8 +502,6 @@ function createWindow() {
     minWidth: 1024,
     minHeight: 640,
     frame: false,
-    transparent: false,
-    backgroundColor: "#0d0f14",
     titleBarStyle: "hidden",
     trafficLightPosition: { x: 12, y: 12 },
     webPreferences: {
@@ -517,8 +515,17 @@ function createWindow() {
     }
   });
 
+  try {
+    mainWindow.setBackgroundMaterial('mica');
+  } catch {
+    try { mainWindow.setBackgroundMaterial('acrylic'); } catch {}
+  }
+
   mainWindow.loadFile(path.join(__dirname, "src", "renderer", "index.html"));
   try { mainWindow.webContents.setUserAgent(USER_AGENT); } catch {}
+
+  // 根据设置注册开发者工具快捷键
+  registerDevToolsShortcut();
 
   mainWindow.webContents.on("console-message", (event, level, message, line, sourceId) => {
     const lvl = typeof level === "number" ? level : 0;
@@ -1199,5 +1206,31 @@ ipcMain.handle("select-download-path", async () => {
   } catch (e) {
     console.error("[select-download-path]", e);
     return null;
+  }
+});
+
+// 开发者工具快捷键
+function registerDevToolsShortcut() {
+  // 设置通过 IPC 从 renderer 发送，这里只负责初始化占位
+}
+
+ipcMain.on("set-dev-tools-shortcut", (event, isOn) => {
+  try {
+    globalShortcut.unregister('CommandOrControl+Shift+I');
+  } catch {}
+  
+  try {
+    if (isOn && mainWindow && !mainWindow.isDestroyed()) {
+      globalShortcut.register('CommandOrControl+Shift+I', () => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.toggleDevTools();
+        }
+      });
+      console.log("[devToolsShortcut] Registered");
+    } else {
+      console.log("[devToolsShortcut] Unregistered");
+    }
+  } catch (e) {
+    console.error("[set-dev-tools-shortcut]", e);
   }
 });
