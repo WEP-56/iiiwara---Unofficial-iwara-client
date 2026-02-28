@@ -2,34 +2,31 @@
 <html lang="zh-CN" data-theme="dark">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src * data: blob:; media-src *; connect-src *;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https: data: blob:; media-src https: blob:; connect-src 'self' https://apiq.iwara.tv https://api.github.com;">
   <title>iwara</title>
   <link rel="stylesheet" href="styles.css">
-  <link rel="stylesheet" href="styles-glass.css">
-  <script src="./lib/liquid-core.min.js"></script>
-  <script>window.LiquidWeb = LiquidWeb;</script>
 </head>
 <body>
   <div id="app-bg"></div>
   <div class="app">
     <div class="titlebar">
       <div class="traf">
-        <div class="traf-dot cl" data-action="close"></div>
-        <div class="traf-dot mn" data-action="minimize"></div>
-        <div class="traf-dot mx" data-action="maximize"></div>
+        <div class="traf-dot cl" data-action="close" role="button" tabindex="0" aria-label="关闭" title="关闭"></div>
+        <div class="traf-dot mn" data-action="minimize" role="button" tabindex="0" aria-label="最小化" title="最小化"></div>
+        <div class="traf-dot mx" data-action="maximize" role="button" tabindex="0" aria-label="最大化" title="最大化"></div>
       </div>
       <div class="tb-mid">iwara</div>
       <div class="tb-right">
-        <div class="tb-pill" id="themeBtn">blue</div>
-        <div class="tb-pill" id="updateBtn">更新</div>
+        <div class="tb-pill" id="themeBtn" role="button" tabindex="0" aria-label="切换配色">blue</div>
+        <div class="tb-pill" id="updateBtn" role="button" tabindex="0" aria-label="更新">更新</div>
       </div>
     </div>
 
     <div class="body">
       <nav class="sidebar" id="sb">
-        <div class="sb-tog" id="sbTog">‹</div>
+        <div class="sb-tog" id="sbTog" role="button" tabindex="0" aria-label="展开或收起侧边栏">‹</div>
 
-        <div class="sb-account" id="accountBtn">
+        <div class="sb-account" id="accountBtn" role="button" tabindex="0" aria-label="账户">
           <div class="sb-av">G</div>
           <div class="sb-acc-info">
             <div class="sb-acc-name">Guest</div>
@@ -39,31 +36,31 @@
         </div>
 
         <div class="sb-nav">
-          <div class="sb-item active" data-page="home">
+          <div class="sb-item active" data-page="home" role="button" tabindex="0" aria-label="推荐">
             <div class="sb-ico">⊞</div><div class="sb-lbl">推荐</div>
           </div>
-          <div class="sb-item" data-page="video">
+          <div class="sb-item" data-page="video" role="button" tabindex="0" aria-label="视频">
             <div class="sb-ico">▷</div><div class="sb-lbl">视频</div>
           </div>
-          <div class="sb-item" data-page="image">
+          <div class="sb-item" data-page="image" role="button" tabindex="0" aria-label="图片">
             <div class="sb-ico">◫</div><div class="sb-lbl">图片</div>
           </div>
-          <div class="sb-item" data-page="forum">
+          <div class="sb-item" data-page="forum" role="button" tabindex="0" aria-label="论坛">
             <div class="sb-ico">◎</div><div class="sb-lbl">论坛</div>
           </div>
-          <div class="sb-item" data-page="search">
+          <div class="sb-item" data-page="search" role="button" tabindex="0" aria-label="搜索">
             <div class="sb-ico">◌</div><div class="sb-lbl">搜索</div>
           </div>
-          <div class="sb-item" data-page="create">
+          <div class="sb-item" data-page="create" role="button" tabindex="0" aria-label="创作">
             <div class="sb-ico">↑</div><div class="sb-lbl">创作</div>
           </div>
         </div>
 
         <div class="sb-foot">
-          <div class="sb-item" id="ratingToggle" data-page-action="toggle-rating">
+          <div class="sb-item" id="ratingToggle" data-page-action="toggle-rating" role="button" tabindex="0" aria-label="评级过滤">
             <div class="sb-ico">⊘</div><div class="sb-lbl">评级过滤</div>
           </div>
-          <div class="sb-item" data-page="settings">
+          <div class="sb-item" data-page="settings" role="button" tabindex="0" aria-label="设置">
             <div class="sb-ico">⊙</div><div class="sb-lbl">设置</div>
           </div>
         </div>
@@ -71,11 +68,11 @@
 
       <div class="main">
         <div class="topbar">
-          <div class="ico-btn hidden" id="topBackBtn" title="返回">‹</div>
+          <div class="ico-btn hidden" id="topBackBtn" role="button" tabindex="0" aria-label="返回" title="返回">‹</div>
           <div class="page-title" id="ptitle">推荐</div>
           <div class="tb-actions">
-            <div class="ico-btn" id="topImmersiveBtn" title="沉浸模式">◫</div>
-            <div class="ico-btn" id="topRefreshBtn" title="刷新">↻</div>
+            <div class="ico-btn" id="topImmersiveBtn" role="button" tabindex="0" aria-label="沉浸模式" title="沉浸模式">◫</div>
+            <div class="ico-btn" id="topRefreshBtn" role="button" tabindex="0" aria-label="刷新" title="刷新">↻</div>
           </div>
         </div>
 
@@ -90,7 +87,7 @@
       <div class="st-sep"></div>
       <div class="st" id="stlbl">推荐</div>
       <div class="st-sep"></div>
-      <div class="st" id="stmsg">ready</div>
+      <div class="st" id="stmsg" role="status" aria-live="polite">ready</div>
     </div>
   </div>
 
@@ -122,9 +119,6 @@
     </div>
   </div>
 
-  <script src="./lib/liquid-core.min.js"></script>
-  <script>window.LiquidWeb = LiquidWeb;</script>
-  <script src="./lib/glass-manager.js"></script>
   <script type="module" src="renderer.js"></script>
 </body>
 </html>

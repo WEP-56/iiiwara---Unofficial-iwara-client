@@ -76,7 +76,7 @@ async function runSearch(ctx,q){
     bindForumEvents()
     bindUserLinks(content)
   }catch(e){
-    resultsHost.innerHTML=''
+    resultsHost.innerHTML=`<div class="create-page" style="padding:18px 0"><div class="create-icon" style="font-size:24px">×</div><div class="create-sub">${ctx.escapeHtml(String(e?.message||e))}</div></div>`
     setStatus(String(e?.message||e),true)
   }finally{
     setLoading(false)

@@ -152,7 +152,7 @@ export function videoCardHtml(ctx,v){
   const likes=ctx.formatNumber(v.numLikes||v.num_likes)
   const id=ctx.escapeAttr(v.id||'')
   const av=author[0]?author[0].toUpperCase():'?'
-  const avImg=authorAvatar?`<img class="av-img" src="${ctx.escapeAttr(authorAvatar)}" alt="" onerror="this.remove()">`:''
+  const avImg=authorAvatar?`<img class="av-img" src="${ctx.escapeAttr(authorAvatar)}" alt="">`:''
   return `<div class="vcard" data-video-id="${id}"><div class="vthumb"><div class="vthumb-bg" style="${bg}"></div>${ctx.playIcon}<span class="vdur">${dur}</span><span class="vrat ${r}">${rl}</span></div><div class="vbody"><div class="vtitle">${title}</div><div class="vmeta"><div class="vauthor"><div class="vav">${avImg}${av}</div>${authorHtml}</div><div class="vlikes">♡ ${likes}</div></div></div></div>`
 }
 
@@ -171,7 +171,7 @@ export function imageCardHtml(ctx,img){
   const authorHtml=author?(uid?`<span class="ulink" data-user-id="${uid}">${author}</span>`:author):''
   const id=ctx.escapeAttr(img.id||'')
   const ph=`data:image/svg+xml;charset=utf-8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200" viewBox="0 0 320 200"><rect width="320" height="200" fill="#1f2937"/><path d="M70 140l50-55 40 45 30-35 60 70H70z" fill="#334155"/><circle cx="115" cy="70" r="14" fill="#334155"/><text x="160" y="182" text-anchor="middle" font-family="Arial" font-size="12" fill="#94a3b8">thumbnail not available</text></svg>`)}`
-  const imgHtml=`<img src="${ctx.escapeAttr(thumb||ph)}" alt=""${fb?` data-fbs="${fb}"`:''} onerror="if(this.dataset.fbs){const a=this.dataset.fbs.split('|').filter(Boolean);const next=a.shift();this.dataset.fbs=a.join('|');if(next){this.src=next;return}}this.onerror=null;this.src='${ph}'">`
+  const imgHtml=`<img src="${ctx.escapeAttr(thumb||ph)}" alt="" data-ph="${ctx.escapeAttr(ph)}"${fb?` data-fbs="${fb}"`:''}>`
   return `<div class="icard" data-image-id="${id}"><div class="ithumb">${imgHtml}</div><div class="ifoot"><div class="ititle">${title}${authorHtml?` · ${authorHtml}`:''}</div><div class="icount">${cnt}p</div></div></div>`
 }
 
@@ -212,7 +212,7 @@ export function forumItemHtml(ctx,f){
   if(!catId)catId=String(ctx.state?.forum?.categoryId||'')
   const cid=ctx.escapeAttr(catId)
   const avatar=userAvatarUrl(f?.user||null)
-  const avImg=avatar?`<img class="av-img" src="${ctx.escapeAttr(avatar)}" alt="" onerror="this.remove()">`:''
+  const avImg=avatar?`<img class="av-img" src="${ctx.escapeAttr(avatar)}" alt="">`:''
   return `<div class="fitem" data-thread-id="${tid}" data-thread-cat-id="${cid}"><div class="fav">${avImg}${av}</div><div class="fbody"><div class="ftitle">${title}</div><div class="fsub">${sectionTitle}${sectionTitle&&userHtml?' · ':''}${userHtml}</div></div><div class="fright"><div class="frep">${ctx.formatNumber(replies)}</div><div class="ftime">${time}</div></div></div>`
 }
 
@@ -240,7 +240,7 @@ export function userItemHtml(ctx,u){
   const id=ctx.escapeAttr(u?.id||'')
   const av=(name||'?')[0].toUpperCase()
   const avatar=userAvatarUrl(u)
-  const avImg=avatar?`<img class="av-img" src="${ctx.escapeAttr(avatar)}" alt="" onerror="this.remove()">`:''
+  const avImg=avatar?`<img class="av-img" src="${ctx.escapeAttr(avatar)}" alt="">`:''
   return `<div class="fitem"${id?` data-user-id="${id}"`:''}><div class="fav">${avImg}${av}</div><div class="fbody"><div class="ftitle">${name} <span style="opacity:.6;font-weight:500">${uname}</span></div><div class="fsub">${about}</div></div><div class="fright"></div></div>`
 }
 

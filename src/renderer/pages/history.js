@@ -81,7 +81,7 @@ function historyCardHtml(item, ctx) {
   
   const ratingClass = rating === 'adult' ? ' adult' : rating === 'ecchi' ? ' ecchi' : '';
   const thumbHtml = thumbnail 
-    ? `<img src="${escapeAttr(thumbnail)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+    ? `<img class="hist-thumb" src="${escapeAttr(thumbnail)}" alt="" loading="lazy">`
     : `<div class="history-thumb-placeholder">${typeIcon}</div>`;
   
   const dataAttr = type === 'video' ? 'data-video-id' : type === 'image' ? 'data-image-id' : 'data-thread-id';

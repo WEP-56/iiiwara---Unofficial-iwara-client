@@ -4,11 +4,14 @@ const fs = require('fs');
 
 const HISTORY_VERSION = 1;
 const WRITE_DEBOUNCE_MS = 2000;
+const MAX_ITEMS = 5000;
+const RETENTION_DAYS = 180;
 
 let historyData = null;
 let historyMap = new Map();
 let writeTimer = null;
 let isDirty = false;
+let didInitialCleanup = false;
 
 function getHistoryFilePath() {
   return path.join(app.getPath('userData'), 'data', 'history.json');
@@ -64,12 +67,35 @@ function loadHistory() {
     }
 
     console.log(`[History] Loaded ${historyData.items.length} items from:`, filePath);
+    if (!didInitialCleanup) {
+      didInitialCleanup = true;
+      try {
+        cleanupOldHistory(RETENTION_DAYS);
+      } catch {}
+      try {
+        enforceLimit();
+      } catch {}
+    }
     return historyData;
   } catch (e) {
     console.error('[History] Load failed:', e);
     historyData = { version: HISTORY_VERSION, items: [] };
     return historyData;
   }
+}
+
+function enforceLimit() {
+  const data = loadHistory();
+  if (!Array.isArray(data.items)) return;
+  if (data.items.length <= MAX_ITEMS) return;
+  const items = data.items.slice();
+  items.sort((a, b) => (b.visitedAt || 0) - (a.visitedAt || 0));
+  data.items = items.slice(0, MAX_ITEMS);
+  historyMap.clear();
+  for (const item of data.items) {
+    historyMap.set(item.id, item);
+  }
+  scheduleSave();
 }
 
 function saveHistoryImmediate() {
@@ -139,6 +165,7 @@ function addHistoryItem(item) {
   }
   
   scheduleSave();
+  enforceLimit();
   return { success: true };
 }
 

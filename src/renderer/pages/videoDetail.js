@@ -50,7 +50,7 @@ function renderVideoDetailMedia(ctx){
   const embed=data?.embedUrl||data?.embed_url
   if(embed){
     const src=escapeAttr(normalizeUrl(embed))
-    left.innerHTML=`<div class="watch-player"><iframe src="${src}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`
+    left.innerHTML=`<div class="watch-player"><div class="detail-loading">该视频为外部嵌入源，已禁用内嵌播放。<div style="margin-top:10px"><a class="detail-link" data-external-url="${src}" href="${src}" rel="noreferrer">在浏览器打开</a></div></div></div>`
     return
   }
   

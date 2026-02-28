@@ -135,34 +135,7 @@ function applyPalette(paletteKey){
     btn.title=`配色：${p.label}`
   }
   saveSetting('palette',p.key)
-  if (window.GlassManager?.active) {
-    window.GlassManager.onPaletteChange(p.key)
-  }
 }
-
-function applyGlassTheme(on, config) {
-  if (!window.GlassManager) return
-  if (on) {
-    let saved = {}
-    try { saved = JSON.parse(localStorage.getItem('iwara_settings') || '{}') } catch {}
-    const glassConfig = {
-      scale:      Number(saved.glassScale)      || 14,
-      blur:       Number(saved.glassBlur)       || 2,
-      saturation: Number(saved.glassSaturation) || 155,
-      aberration: Number(saved.glassAberration) || 25,
-      bgOpacity:  Number(saved.glassBgOpacity)  || 0.50,
-      mode:       saved.glassMode               || 'standard',
-      ...(config || {}),
-    }
-    GlassManager.enable(state.palette, glassConfig)
-    saveSetting('liquidGlass', true)
-  } else {
-    GlassManager.disable()
-    saveSetting('liquidGlass', false)
-  }
-}
-window.applyGlassTheme = applyGlassTheme
-window.GlassManagerUpdateConfig = (cfg) => window.GlassManager?.updateConfig(cfg)
 
 function saveSetting(key,val){
   try{
@@ -388,13 +361,6 @@ function loadSettings(){
       window.electronAPI?.setZoomFactor?.(scale)
     }
     
-    // 加载 glass 主题
-    if (settings.liquidGlass) {
-      requestAnimationFrame(() => {
-        setTimeout(() => applyGlassTheme(true), 100)
-      })
-    }
-    
     // 更多设置可以在此加载
   }catch{}
 }
@@ -415,7 +381,18 @@ function nextPaletteKey(cur){
   const idx=Math.max(0,PALETTES.findIndex((p)=>p.key===cur))
   return PALETTES[(idx+1)%PALETTES.length]?.key||PALETTES[0].key
 }
-function setStatus(msg,isError=false){const st=document.getElementById('stmsg');if(st)st.textContent=msg;const dot=document.getElementById('netDot');if(dot)dot.style.background=isError?'#f87171':'#4ade80'}
+function setStatus(msg,isError=false){
+  const st=document.getElementById('stmsg')
+  if(st){
+    st.textContent=msg
+    if(isError)st.setAttribute('aria-live','assertive')
+    else st.setAttribute('aria-live','polite')
+  }
+  const dot=document.getElementById('netDot')
+  if(dot)dot.style.background=isError?'#f87171':'#4ade80'
+  const bar=document.querySelector('.statusbar')
+  if(bar)bar.classList.toggle('error',!!isError)
+}
 function getRatingQuery(){if(state.rating.adult)return'adult';if(state.rating.general&&!state.rating.ecchi)return'general';if(state.rating.ecchi&&!state.rating.general)return'ecchi';return null}
 
 function setTopTitles(title){return nav.setTopTitles(title)}
@@ -886,7 +863,7 @@ function renderProfilePage2(){
     const uname=escapeHtml(meUsername())
     const letter=escapeHtml(meAvatarLetter())
     const url=escapeAttr(meAvatarUrl())
-    const avImg=url?`<img class="av-img" src="${url}" alt="" onerror="this.remove()">`:''
+    const avImg=url?`<img class="av-img" src="${url}" alt="">`:''
     const meta=uname?`已登录 · ${uname}`:'已登录'
     return pageContainerHtml(`<div class="profile-header"><div class="profile-av">${avImg}${letter}</div><div class="profile-info"><div class="profile-name">${name}</div><div class="profile-meta">${meta}</div></div><div class="profile-stats"><div class="profile-stat"><div class="profile-stat-n">—</div><div class="profile-stat-l">订阅</div></div><div class="profile-stat"><div class="profile-stat-n">—</div><div class="profile-stat-l">关注</div></div><div class="profile-stat"><div class="profile-stat-n">—</div><div class="profile-stat-l">粉丝</div></div></div></div><div id="profilePane">${renderProfilePane()}</div><div class="create-page" style="padding:10px 0 22px"><button class="create-btn" id="profileLogoutBtn" style="background:rgba(255,255,255,.08);border:1px solid var(--b0);color:var(--t1)">退出登录</button></div>`)
   }
@@ -895,7 +872,7 @@ function renderProfilePage2(){
 
 function setLoading(on){state.loading=on;const host=document.getElementById('netHost');if(host)host.textContent='iwara.tv';setStatus(on?'loading...':'ready',false)}
 
-function updateAccountUi(){const nameEl=document.querySelector('#accountBtn .sb-acc-name');const subEl=document.querySelector('#accountBtn .sb-acc-sub');const avEl=document.querySelector('#accountBtn .sb-av');if(nameEl)nameEl.textContent=state.auth.hasAccess?(state.me?.name||state.me?.username||'User'):'Guest';if(subEl)subEl.textContent=state.auth.hasAccess?(meUsername()?`已登录 · ${meUsername()}`:'已登录'):'点击登录';if(avEl){if(state.auth.hasAccess){const letter=meAvatarLetter();const url=meAvatarUrl();const img=url?`<img class="av-img" src="${escapeAttr(url)}" alt="" onerror="this.remove()">`:'';avEl.innerHTML=`${img}${escapeHtml(letter)}`}else{avEl.textContent='G'}}}
+function updateAccountUi(){const nameEl=document.querySelector('#accountBtn .sb-acc-name');const subEl=document.querySelector('#accountBtn .sb-acc-sub');const avEl=document.querySelector('#accountBtn .sb-av');if(nameEl)nameEl.textContent=state.auth.hasAccess?(state.me?.name||state.me?.username||'User'):'Guest';if(subEl)subEl.textContent=state.auth.hasAccess?(meUsername()?`已登录 · ${meUsername()}`:'已登录'):'点击登录';if(avEl){if(state.auth.hasAccess){const letter=meAvatarLetter();const url=meAvatarUrl();const img=url?`<img class="av-img" src="${escapeAttr(url)}" alt="">`:'';avEl.innerHTML=`${img}${escapeHtml(letter)}`}else{avEl.textContent='G'}}}
 
 async function loadMyPostsList(token=state.navToken){
   const host=document.getElementById('myPostsList')
@@ -1212,11 +1189,6 @@ async function renderPageInitial(){
   }
   content.innerHTML=pageContainerHtml(`<div class="create-page" style="padding:30px 0"><div class="create-icon" style="font-size:28px">○</div><div class="create-sub">加载中…</div></div>`)
   await fetchAndRenderAppend(true,token)
-  requestAnimationFrame(() => {
-    if (window.GlassManager?.active) {
-      window.GlassManager.mountNewCards(document.getElementById('content'))
-    }
-  })
 }
 
 async function fetchAndRenderAppend(reset,token=state.navToken){
@@ -1251,11 +1223,6 @@ async function fetchAndRenderAppend(reset,token=state.navToken){
     }
   }finally{
     setLoading(false)
-    requestAnimationFrame(() => {
-      if (window.GlassManager?.active) {
-        window.GlassManager.mountNewCards(document.getElementById('content'))
-      }
-    })
   }
 }
 
@@ -1282,6 +1249,50 @@ async function reloadPage(){
 document.addEventListener('DOMContentLoaded',async()=>{
   const savedPalette=(()=>{try{return localStorage.getItem('palette')}catch{return null}})()
   applyPalette(savedPalette||state.palette||'blue')
+
+  document.addEventListener('error',(e)=>{
+    const t=e?.target
+    if(!t||t.tagName!=='IMG')return
+    const ds=t.dataset||{}
+    if(ds.fbs!==undefined){
+      const arr=String(ds.fbs||'').split('|').filter(Boolean)
+      const next=arr.shift()
+      ds.fbs=arr.join('|')
+      if(next){
+        try{t.src=next}catch{}
+        return
+      }
+      const ph=ds.ph
+      if(ph){
+        delete ds.fbs
+        delete ds.ph
+        try{t.src=ph}catch{}
+        return
+      }
+    }
+    if(t.classList&&t.classList.contains('hist-thumb')){
+      try{t.style.display='none'}catch{}
+      return
+    }
+    if(t.classList&&t.classList.contains('av-img')){
+      try{t.remove()}catch{}
+    }
+  },true)
+
+  document.addEventListener('keydown',(e)=>{
+    const isEnter=e.key==='Enter'
+    const isSpace=e.key===' '||e.code==='Space'
+    if(!isEnter&&!isSpace)return
+    const t=e.target
+    if(!t||!t.getAttribute)return
+    const tag=String(t.tagName||'').toLowerCase()
+    if(['input','textarea','select','button'].includes(tag))return
+    if(t.isContentEditable)return
+    if(t.getAttribute('role')==='button'){
+      e.preventDefault()
+      try{t.click()}catch{}
+    }
+  },true)
 
   document.querySelectorAll('.traf-dot[data-action]').forEach((el)=>{
     el.addEventListener('click',()=>{

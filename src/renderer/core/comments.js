@@ -36,7 +36,7 @@ export function commentItemHtml(ctx,x){
   const time=escapeHtml(commentLikeTime(x))
   const body=linkifyText(commentLikeBody(x),{escapeHtml,escapeAttr})
   const userHtml=u.id?`<span class="ulink" data-user-id="${escapeAttr(u.id)}">${escapeHtml(u.name)}</span>`:escapeHtml(u.name)
-  const avImg=u.avatarUrl?`<img class="av-img" src="${escapeAttr(u.avatarUrl)}" alt="" onerror="this.remove()">`:''
+  const avImg=u.avatarUrl?`<img class="av-img" src="${escapeAttr(u.avatarUrl)}" alt="">`:''
   return `<div class="cmt-item"><div class="cmt-av">${avImg}${escapeHtml(u.av)}</div><div class="cmt-main"><div class="cmt-head"><div class="cmt-user">${userHtml}</div>${time?`<div class="cmt-time">${time}</div>`:''}</div><div class="cmt-body">${body||'—'}</div></div></div>`
 }
 

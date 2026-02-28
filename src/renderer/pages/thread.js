@@ -103,7 +103,7 @@ function floorItemHtml(ctx,x,n){
     return `https://i.iwara.tv/image/${base}/${encodeURIComponent(String(aid))}/${encodeURIComponent(fileName)}`
   })()
   const userHtml=id?`<span class="ulink" data-user-id="${escapeAttr(id)}">${escapeHtml(name)}</span>`:escapeHtml(name)
-  const avImg=avatarUrl?`<img class="av-img" src="${escapeAttr(avatarUrl)}" alt="" onerror="this.remove()">`:''
+  const avImg=avatarUrl?`<img class="av-img" src="${escapeAttr(avatarUrl)}" alt="">`:''
   return `<article class="floor" id="f${n}" data-floor="${n}"><div class="floor-rail"><a class="floor-no" href="#f${n}" title="#${n}">${n}F</a><div class="floor-av">${avImg}${escapeHtml(av)}</div></div><div class="floor-card"><div class="floor-head"><div class="floor-user">${userHtml}</div>${time?`<div class="floor-time">${time}</div>`:''}<a class="floor-tag" href="#f${n}">#${n}</a></div>${floorBodyHtml(ctx,x?.body||x?.content||'')}</div></article>`
 }
 

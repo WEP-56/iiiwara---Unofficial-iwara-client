@@ -22,7 +22,7 @@ export async function renderFeedAppend(ctx,{reset,token}){
     if(token!==undefined&&token!==null&&token!==state.navToken)return
     state.hasMore=hasMore
     if(reset){
-      content.innerHTML=pageContainerHtml(`${renderImagesMasonry(results)}`)
+      content.innerHTML=pageContainerHtml(`${results.length?renderImagesMasonry(results):`<div class="create-page" style="padding:30px 0"><div class="create-icon" style="font-size:28px">○</div><div class="create-sub">暂无内容</div></div>`}`)
     }else{
       const masonry=content.querySelector('.imasonry')
       if(masonry)masonry.insertAdjacentHTML('beforeend',results.map(imageCardHtml).join(''))
@@ -36,17 +36,37 @@ function pageSortFor(chip){if(chip==='最新')return'date';if(chip==='热门')re
 
 async function resolveTagIdsByName(ctx,name){
   const { state, apiGet, endpoints, pickResults }=ctx
+  const TAG_CACHE_MAX=200
   const key=String(name||'').trim().toLowerCase()
   if(!key)return[]
-  if(state.tagCache[key])return state.tagCache[key]
+  if(state.tagCache&&state.tagCache.has&&state.tagCache.get){
+    if(state.tagCache.has(key)){
+      const hit=state.tagCache.get(key)||[]
+      state.tagCache.delete(key)
+      state.tagCache.set(key,hit)
+      return hit
+    }
+  }
   try{
     const data=await apiGet(endpoints.tags(),{filter:name,page:0,limit:10},{skipAuthWait:true})
     const results=pickResults(data)
     const ids=results.map(t=>t?.id).filter(Boolean)
-    state.tagCache[key]=ids
+    if(state.tagCache&&state.tagCache.set){
+      state.tagCache.set(key,ids)
+      while(state.tagCache.size>TAG_CACHE_MAX){
+        const first=state.tagCache.keys().next().value
+        state.tagCache.delete(first)
+      }
+    }
     return ids
   }catch{
-    state.tagCache[key]=[]
+    if(state.tagCache&&state.tagCache.set){
+      state.tagCache.set(key,[])
+      while(state.tagCache.size>TAG_CACHE_MAX){
+        const first=state.tagCache.keys().next().value
+        state.tagCache.delete(first)
+      }
+    }
     return[]
   }
 }

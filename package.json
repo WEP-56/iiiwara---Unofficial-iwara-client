@@ -12,8 +12,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "electron-updater": "^6.3.0",
-    "liquid-web": "^1.1.1"
+    "electron-updater": "^6.3.0"
   },
   "devDependencies": {
     "electron": "^30.0.0",

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session, net: electronNet, dialog, shell, globalShortcut } = require("electron");
+const { app, BrowserWindow, ipcMain, session, net: electronNet, dialog, shell, globalShortcut, safeStorage } = require("electron");
 let autoUpdater = null;
 const path = require("path");
 const fs = require("fs");
@@ -40,6 +40,32 @@ function tokensFilePath() {
 
 function credentialsFilePath() {
   return path.join(app.getPath("userData"), "credentials.json");
+}
+
+function canEncryptLocalSecrets() {
+  try {
+    return !!safeStorage && safeStorage.isEncryptionAvailable();
+  } catch {
+    return false;
+  }
+}
+
+function encryptSecretToBase64(text) {
+  try {
+    const buf = safeStorage.encryptString(String(text ?? ""));
+    return Buffer.from(buf).toString("base64");
+  } catch {
+    return null;
+  }
+}
+
+function decryptSecretFromBase64(b64) {
+  try {
+    const buf = Buffer.from(String(b64 || ""), "base64");
+    return safeStorage.decryptString(buf);
+  } catch {
+    return null;
+  }
 }
 
 function safeJsonParse(text) {
@@ -95,8 +121,15 @@ function loadTokensFromDisk() {
     const raw = fs.readFileSync(p, "utf8");
     const data = safeJsonParse(raw);
     if (!data || typeof data !== "object") return;
-    if (typeof data.authToken === "string") tokenState.authToken = data.authToken;
-    if (typeof data.accessToken === "string") tokenState.accessToken = data.accessToken;
+    const encrypted = data && typeof data.v === "number" && data.v >= 2;
+    if (encrypted) {
+      if (typeof data.authTokenEnc === "string") tokenState.authToken = decryptSecretFromBase64(data.authTokenEnc);
+      if (typeof data.accessTokenEnc === "string") tokenState.accessToken = decryptSecretFromBase64(data.accessTokenEnc);
+    } else {
+      if (typeof data.authToken === "string") tokenState.authToken = data.authToken;
+      if (typeof data.accessToken === "string") tokenState.accessToken = data.accessToken;
+      if (canEncryptLocalSecrets() && (tokenState.authToken || tokenState.accessToken)) saveTokensToDisk();
+    }
     tokenState.authExpireAtMs = tokenState.authToken ? tokenExpireAtMs(tokenState.authToken) : null;
     tokenState.accessExpireAtMs = tokenState.accessToken ? tokenExpireAtMs(tokenState.accessToken) : null;
     if (tokenState.accessToken && tokenType(tokenState.accessToken) !== "access_token") tokenState.accessToken = null;
@@ -112,11 +145,13 @@ function loadTokensFromDisk() {
 function saveTokensToDisk() {
   try {
     const p = tokensFilePath();
-    const payload = JSON.stringify(
-      { authToken: tokenState.authToken, accessToken: tokenState.accessToken },
-      null,
-      2,
-    );
+    const useEnc = canEncryptLocalSecrets();
+    const authTokenEnc = useEnc && tokenState.authToken ? encryptSecretToBase64(tokenState.authToken) : null;
+    const accessTokenEnc = useEnc && tokenState.accessToken ? encryptSecretToBase64(tokenState.accessToken) : null;
+    const payloadObj = useEnc
+      ? { v: 2, authTokenEnc: authTokenEnc || null, accessTokenEnc: accessTokenEnc || null }
+      : { v: 1, authToken: tokenState.authToken, accessToken: tokenState.accessToken };
+    const payload = JSON.stringify(payloadObj, null, 2);
     fs.writeFileSync(p, payload, "utf8");
     console.log("[Token] Saved to disk, hasAccess:", !!tokenState.accessToken, "hasRefresh:", !!tokenState.authToken, "path:", p);
   } catch (e) {
@@ -174,14 +209,14 @@ function decrypt(encrypted, key) {
 function saveCredentials(email, password) {
   try {
     const p = credentialsFilePath();
-    const key = 'iwara-electron-client'; // 固定密钥
-    const payload = JSON.stringify({
-      email: email,
-      password: encrypt(password, key),
-      savedAt: Date.now()
-    }, null, 2);
+    if (!canEncryptLocalSecrets()) {
+      return { success: false, error: "Encryption unavailable" };
+    }
+    const passwordEnc = encryptSecretToBase64(password);
+    if (!passwordEnc) return { success: false, error: "Encrypt failed" };
+    const payload = JSON.stringify({ v: 2, email: String(email || ""), passwordEnc, savedAt: Date.now() }, null, 2);
     fs.writeFileSync(p, payload, "utf8");
-    console.log("[Credentials] Saved for email:", email);
+    console.log("[Credentials] Saved");
     return { success: true };
   } catch (e) {
     console.error("[Credentials] save failed:", e);
@@ -197,14 +232,23 @@ function loadCredentials() {
     const raw = fs.readFileSync(p, "utf8");
     const data = safeJsonParse(raw);
 
-    if (!data || !data.email || !data.password) {
-      return null;
+    if (!data || typeof data !== "object") return null;
+
+    if (typeof data.v === "number" && data.v >= 2) {
+      if (!data.email || !data.passwordEnc) return null;
+      const decryptedPassword = decryptSecretFromBase64(data.passwordEnc);
+      if (!decryptedPassword) return null;
+      console.log("[Credentials] Loaded");
+      return { email: data.email, password: decryptedPassword };
     }
 
+    if (!data.email || !data.password) return null;
     const key = 'iwara-electron-client';
     const decryptedPassword = decrypt(data.password, key);
-
-    console.log("[Credentials] Loaded for email:", data.email);
+    if (canEncryptLocalSecrets()) {
+      saveCredentials(data.email, decryptedPassword);
+    }
+    console.log("[Credentials] Loaded");
     return { email: data.email, password: decryptedPassword };
   } catch (e) {
     console.error("[Credentials] load failed:", e);
@@ -231,7 +275,7 @@ function checkPort(port) {
     socket.setTimeout(200);
     socket.on('connect', () => { socket.destroy(); resolve(true); });
     socket.on('timeout', () => { socket.destroy(); resolve(false); });
-    socket.on('error', () => { resolve(false); });
+    socket.on('error', () => { try { socket.destroy(); } catch {} resolve(false); });
     socket.connect(port, '127.0.0.1');
   });
 }
@@ -509,9 +553,9 @@ function createWindow() {
       partition: "persist:iwara",
       contextIsolation: true,
       nodeIntegration: false,
-      webviewTag: true,
-      sandbox: false,
-      webSecurity: false
+      webviewTag: false,
+      sandbox: true,
+      webSecurity: true
     }
   });
 
@@ -523,6 +567,29 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, "src", "renderer", "index.html"));
   try { mainWindow.webContents.setUserAgent(USER_AGENT); } catch {}
+
+  try {
+    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+      try {
+        const u = new URL(String(url || ""));
+        if (u.protocol === "http:" || u.protocol === "https:") {
+          shell.openExternal(u.toString()).catch(() => {});
+        }
+      } catch {}
+      return { action: "deny" };
+    });
+  } catch {}
+
+  try {
+    mainWindow.webContents.on("will-navigate", (event, url) => {
+      try {
+        const u = new URL(String(url || ""));
+        if (u.protocol !== "file:") event.preventDefault();
+      } catch {
+        event.preventDefault();
+      }
+    });
+  } catch {}
 
   // 根据设置注册开发者工具快捷键
   registerDevToolsShortcut();
@@ -559,6 +626,89 @@ function createWindow() {
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
+}
+
+function isTrustedIpcEvent(event) {
+  try {
+    if (!mainWindow || mainWindow.isDestroyed()) return false;
+    if (!event || !event.sender) return false;
+    if (event.sender.id !== mainWindow.webContents.id) return false;
+    const frame = event.senderFrame;
+    if (!frame) return false;
+    return frame === mainWindow.webContents.mainFrame;
+  } catch {
+    return false;
+  }
+}
+
+function isSafeApiEndpoint(endpoint) {
+  const ep = String(endpoint || "");
+  if (!ep.startsWith("/")) return false;
+  if (ep.startsWith("//")) return false;
+  if (ep.includes("\\")) return false;
+  const segments = ep.split("/").filter(Boolean);
+  if (segments.includes("..")) return false;
+  try {
+    const u = new URL(ep, API_BASE_URL);
+    return u.origin === new URL(API_BASE_URL).origin;
+  } catch {
+    return false;
+  }
+}
+
+function normalizeApiMethod(method) {
+  const m = String(method || "GET").toUpperCase();
+  if (m === "GET" || m === "POST" || m === "DELETE" || m === "PUT" || m === "PATCH") return m;
+  return null;
+}
+
+function isPlainObject(x) {
+  if (!x || typeof x !== "object") return false;
+  const p = Object.getPrototypeOf(x);
+  return p === Object.prototype || p === null;
+}
+
+function sanitizeApiQuery(query) {
+  if (!isPlainObject(query)) return null;
+  const out = {};
+  const entries = Object.entries(query);
+  if (entries.length > 80) return null;
+  for (const [k, v] of entries) {
+    if (typeof k !== "string" || !k) continue;
+    if (k.length > 80) continue;
+    if (v === null || v === undefined) continue;
+    if (typeof v === "string") out[k] = v.length > 2000 ? v.slice(0, 2000) : v;
+    else if (typeof v === "number" && Number.isFinite(v)) out[k] = v;
+    else if (typeof v === "boolean") out[k] = v;
+    else out[k] = String(v).slice(0, 2000);
+  }
+  return out;
+}
+
+function sanitizeApiHeaders(headers) {
+  if (!isPlainObject(headers)) return null;
+  const allow = new Set(["X-Version"]);
+  const out = {};
+  const entries = Object.entries(headers);
+  if (entries.length > 40) return null;
+  for (const [k, v] of entries) {
+    const key = String(k || "").trim();
+    if (!key || key.length > 80) continue;
+    if (!allow.has(key)) continue;
+    if (v === undefined || v === null) continue;
+    out[key] = String(v).slice(0, 4000);
+  }
+  return out;
+}
+
+function sanitizeApiBody(body) {
+  if (body === undefined) return undefined;
+  if (body === null) return null;
+  if (typeof body === "string") return body.length > 200000 ? body.slice(0, 200000) : body;
+  if (typeof body === "number" || typeof body === "boolean") return body;
+  if (Array.isArray(body)) return body.slice(0, 2000);
+  if (isPlainObject(body)) return body;
+  return null;
 }
 
 function normalizeVersionTag(v) {
@@ -839,6 +989,7 @@ app.on("window-all-closed", () => {
 
 // 窗口控制
 ipcMain.on("window-control", (event, action) => {
+  if (!isTrustedIpcEvent(event)) return;
   if (!mainWindow) return;
   if (action === "minimize") {
     mainWindow.minimize();
@@ -861,14 +1012,16 @@ ipcMain.handle("app-version", async () => {
   }
 });
 
-ipcMain.handle("update-get-state", async () => {
+ipcMain.handle("update-get-state", async (event) => {
+  if (!isTrustedIpcEvent(event)) return { ...updateState, error: "Untrusted caller" };
   try {
     if (!updateState.currentVersion) updateState.currentVersion = app.getVersion();
   } catch {}
   return { ...updateState };
 });
 
-ipcMain.handle("update-check", async () => {
+ipcMain.handle("update-check", async (event) => {
+  if (!isTrustedIpcEvent(event)) return { ...updateState, error: "Untrusted caller" };
   updateState.supported = !!(app.isPackaged && autoUpdater);
   updateState.checking = true;
   updateState.error = null;
@@ -909,7 +1062,8 @@ ipcMain.handle("update-check", async () => {
   return { ...updateState };
 });
 
-ipcMain.handle("update-install", async () => {
+ipcMain.handle("update-install", async (event) => {
+  if (!isTrustedIpcEvent(event)) return { ok: false, message: "Untrusted caller" };
   if (updateState.manualDownloadUrl || updateState.manualReleaseUrl) {
     const target = updateState.manualDownloadUrl || updateState.manualReleaseUrl;
     try {
@@ -935,7 +1089,7 @@ ipcMain.handle("update-install", async () => {
 
 // 接收前端传来的 Token (从 Webview 中提取)
 ipcMain.on("set-api-token", (event, token) => {
-  console.log("Token received via IPC:", token ? token.substring(0, 20) + "..." : "null");
+  if (!isTrustedIpcEvent(event)) return;
   if (!token) {
     setAccessToken(null);
     return;
@@ -947,10 +1101,21 @@ ipcMain.on("set-api-token", (event, token) => {
 
 // 代理 API 请求 (绕过 CORS 和 Cloudflare)
 ipcMain.handle("api-request", async (event, { endpoint, method = 'GET', body, query, headers, skipAuthWait = false }) => {
-  return await apiRequest({ endpoint, method, body, query, headers, skipAuthWait });
+  if (!isTrustedIpcEvent(event)) return { error: true, status: 403, message: "Untrusted caller" };
+  if (!isSafeApiEndpoint(endpoint)) return { error: true, status: 400, message: "Invalid endpoint" };
+  const m = normalizeApiMethod(method);
+  if (!m) return { error: true, status: 400, message: "Invalid method" };
+  const safeHeaders = sanitizeApiHeaders(headers);
+  if (headers && !safeHeaders) return { error: true, status: 400, message: "Invalid headers" };
+  const safeQuery = sanitizeApiQuery(query);
+  if (query && !safeQuery) return { error: true, status: 400, message: "Invalid query" };
+  const safeBody = sanitizeApiBody(body);
+  if (body !== undefined && safeBody === null) return { error: true, status: 400, message: "Invalid body" };
+  return await apiRequest({ endpoint: String(endpoint), method: m, body: safeBody, query: safeQuery || undefined, headers: safeHeaders || undefined, skipAuthWait });
 });
 
 ipcMain.handle("auth-login", async (event, { email, password }) => {
+  if (!isTrustedIpcEvent(event)) return { error: true, message: "Untrusted caller" };
   try {
     const looksForbidden = (x) => {
       const m = String(x && x.message ? x.message : "");
@@ -1028,30 +1193,34 @@ ipcMain.handle("auth-login", async (event, { email, password }) => {
   }
 });
 
-ipcMain.handle("auth-logout", async () => {
+ipcMain.handle("auth-logout", async (event) => {
+  if (!isTrustedIpcEvent(event)) return { success: false, error: "Untrusted caller" };
   clearTokens();
   clearCredentials();
   return { success: true };
 });
 
-ipcMain.handle("auth-status", async () => {
+ipcMain.handle("auth-status", async (event) => {
+  if (!isTrustedIpcEvent(event)) return { hasRefresh: false, hasAccess: false, isRefreshing: false };
   const hasRefresh = !!tokenState.authToken && !isTokenExpired(tokenState.authToken);
   const hasAccess = !!tokenState.accessToken && !isTokenExpired(tokenState.accessToken, 5 * 60);
   return { hasRefresh, hasAccess, isRefreshing: !!tokenState.refreshing };
 });
 
-ipcMain.handle("auth-get-saved-credentials", async () => {
+ipcMain.handle("auth-get-saved-credentials", async (event) => {
+  if (!isTrustedIpcEvent(event)) return { success: false };
   const creds = loadCredentials();
   return creds ? { success: true, email: creds.email } : { success: false };
 });
 
-ipcMain.handle("auth-auto-login", async () => {
+ipcMain.handle("auth-auto-login", async (event) => {
+  if (!isTrustedIpcEvent(event)) return { success: false, message: "Untrusted caller" };
   const creds = loadCredentials();
   if (!creds) {
     return { success: false, message: "No saved credentials" };
   }
 
-  console.log("[Auth] Auto-login with:", creds.email);
+  console.log("[Auth] Auto-login");
 
   const loginUrl = new URL("/user/login", API_BASE_URL).toString();
   const doLogin = async () => {
@@ -1122,33 +1291,40 @@ ipcMain.handle("auth-auto-login", async () => {
 
 // 历史记录 IPC 处理
 ipcMain.handle("history-add", async (event, item) => {
+  if (!isTrustedIpcEvent(event)) return { success: false, error: "Untrusted caller" };
   return history.addHistoryItem(item);
 });
 
 ipcMain.handle("history-list", async (event, params) => {
+  if (!isTrustedIpcEvent(event)) return { error: true, message: "Untrusted caller" };
   return history.listHistory(params || {});
 });
 
 ipcMain.handle("history-remove", async (event, id) => {
+  if (!isTrustedIpcEvent(event)) return { success: false, error: "Untrusted caller" };
   return history.removeHistory(id);
 });
 
 ipcMain.handle("history-clear", async (event, params) => {
+  if (!isTrustedIpcEvent(event)) return { success: false, error: "Untrusted caller" };
   return history.clearHistory(params || {});
 });
 
-ipcMain.handle("history-stats", async () => {
+ipcMain.handle("history-stats", async (event) => {
+  if (!isTrustedIpcEvent(event)) return {};
   return history.getHistoryStats();
 });
 
 // 窗口设置
 ipcMain.on("set-always-on-top", (event, isOn) => {
+  if (!isTrustedIpcEvent(event)) return;
   if (mainWindow) {
     mainWindow.setAlwaysOnTop(!!isOn);
   }
 });
 
 ipcMain.on("set-hardware-acceleration", (event, isOn) => {
+  if (!isTrustedIpcEvent(event)) return;
   // 硬件加速需要在应用启动前设置，这里只保存配置
   try {
     const settingsPath = path.join(app.getPath("userData"), "settings.json");
@@ -1158,6 +1334,7 @@ ipcMain.on("set-hardware-acceleration", (event, isOn) => {
 });
 
 ipcMain.handle("set-auto-start", async (event, isOn) => {
+  if (!isTrustedIpcEvent(event)) return { success: false, error: "Untrusted caller" };
   try {
     app.setLoginItemSettings({ openAtLogin: !!isOn });
     return { success: true };
@@ -1167,6 +1344,7 @@ ipcMain.handle("set-auto-start", async (event, isOn) => {
 });
 
 ipcMain.handle("open-external-url", async (event, rawUrl) => {
+  if (!isTrustedIpcEvent(event)) return { success: false, error: "Untrusted caller" };
   try {
     const u = new URL(String(rawUrl || ""));
     if (u.protocol !== "http:" && u.protocol !== "https:") {
@@ -1180,7 +1358,8 @@ ipcMain.handle("open-external-url", async (event, rawUrl) => {
 });
 
 // 清除缓存
-ipcMain.handle("clear-cache", async () => {
+ipcMain.handle("clear-cache", async (event) => {
+  if (!isTrustedIpcEvent(event)) return { success: false, error: "Untrusted caller" };
   try {
     if (iwaraSession) {
       await iwaraSession.clearCache();
@@ -1193,7 +1372,8 @@ ipcMain.handle("clear-cache", async () => {
 });
 
 // 选择下载路径
-ipcMain.handle("select-download-path", async () => {
+ipcMain.handle("select-download-path", async (event) => {
+  if (!isTrustedIpcEvent(event)) return null;
   try {
     const result = await dialog.showOpenDialog(mainWindow, {
       title: "选择下载保存路径",
@@ -1215,6 +1395,7 @@ function registerDevToolsShortcut() {
 }
 
 ipcMain.on("set-dev-tools-shortcut", (event, isOn) => {
+  if (!isTrustedIpcEvent(event)) return;
   try {
     globalShortcut.unregister('CommandOrControl+Shift+I');
   } catch {}

@@ -14,7 +14,7 @@ export const state = {
   navToken: 0,
   auth: { hasAccess: false, hasRefresh: false, isRefreshing: false },
   search: { type: 'videos', q: '' },
-  tagCache: {},
+  tagCache: new Map(),
   forum: { view: 'cats', group: 'global', categoryId: '', categoryLabel: '', cats: null },
   view: {
     kind: '',
@@ -82,4 +82,3 @@ export const SUB = {
   create: { type: 'subnav', items: ['投稿', '我的投稿'] },
   profile: { type: 'subnav', items: ['订阅', '好友', '通知', '讯息', '会话', '点赞', '历史'] },
 }
-

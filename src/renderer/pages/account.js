@@ -47,7 +47,7 @@ function profilePageHtml(ctx,{savedEmail}={}){
     const uname=escapeHtml(meUsername())
     const av=escapeHtml(meAvatarLetter())
     const url=escapeAttr(meAvatarUrl?meAvatarUrl():'')
-    const avImg=url?`<img class="av-img" src="${url}" alt="" onerror="this.remove()">`:''
+    const avImg=url?`<img class="av-img" src="${url}" alt="">`:''
     const meta=uname?`已登录 · ${uname}`:'已登录'
     const t=(v)=>v===0?'0':(v===null||v===undefined?'—':String(v))
     const following=t(state.meCounts?.followingCount)
